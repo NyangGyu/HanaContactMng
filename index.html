@@ -3,36 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.0.0</title>
+    <title>Hana 연락처 정리 도우미 v1.1.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
         body { background-color: #f4f6f9; font-family: 'Malgun Gothic', sans-serif; }
         .card-header { font-weight: bold; background-color: #e9ecef; }
-        
-        .dropzone {
-            border: 3px dashed #0d6efd; border-radius: 10px; background-color: #f8f9fa;
-            padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;
-            height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
+        .dropzone { border: 3px dashed #0d6efd; border-radius: 10px; background-color: #f8f9fa; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .dropzone.dragover { background-color: #e2eefd; border-color: #0a58ca; transform: scale(1.01); }
         .dropzone-icon { font-size: 2.5rem; color: #0d6efd; margin-bottom: 10px; }
-        
-        .spinner-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); 
-            display: none; z-index: 9999; justify-content: center; align-items: center; color: white; flex-direction: column; 
-        }
-
+        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 9999; justify-content: center; align-items: center; color: white; flex-direction: column; }
         .table-scroll-area { max-height: 600px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; }
         .table-scroll-area thead th { position: sticky; top: 0; z-index: 1; background-color: #f8f9fa; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
         .tool-bar { background-color: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #0d6efd; }
-        
-        /* 알림 상태바 애니메이션 */
         .toast-status { opacity: 0; transition: opacity 0.3s ease-in-out; font-weight: bold; }
         .toast-status.show { opacity: 1; }
     </style>
@@ -40,7 +26,7 @@
 <body>
 
 <div class="spinner-overlay" id="loadingSpinner">
-    <div class="spinner-border text-primary mb-3" role="status" style="width: 4rem; height: 4rem;"></div>
+    <div class="spinner-border text-primary mb-3" style="width: 4rem; height: 4rem;"></div>
     <h3 id="loadingText" class="fw-bold">데이터를 처리 중입니다...</h3>
 </div>
 
@@ -48,10 +34,8 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 
-                <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.0.0</span>
-            </h2>
-            <p class="text-muted mb-0 mt-1">대용량 엑셀 데이터를 모바일 주소록(vCard) 및 까톡오토 양식으로 초고속 변환합니다.</p>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.1.0</span></h2>
+            <p class="text-muted mb-0 mt-1">다중 키워드 검색과 실시간 치환/삽입 기능이 적용된 대용량 주소록 클렌징 툴.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
             <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 엑셀 출력</button>
@@ -65,42 +49,32 @@
             <div class="card-header text-primary bg-white fs-5"><i class="bi bi-1-circle-fill"></i> 데이터 업로드 및 기본 설정</div>
             <div class="card-body">
                 <div class="row g-4 align-items-center">
-                    
                     <div class="col-md-5 border-end">
                         <div class="mb-4">
                             <label class="form-label fw-bold text-secondary">1. GRM 담당자 선택</label>
-                            <select id="grmIdSelect" class="form-select border-primary shadow-sm" disabled>
-                                <option value="">서버 데이터 동기화 중...</option>
-                            </select>
+                            <select id="grmIdSelect" class="form-select border-primary shadow-sm" disabled><option value="">대기 중...</option></select>
                             <div class="form-text mt-1"><span id="initNotice" class="badge bg-warning text-dark">대기중</span> GRM_Data.xlsx 연동</div>
                         </div>
-
                         <div>
-                            <label class="form-label fw-bold text-secondary">2. 위촉일자 필터링 (선택사항)</label>
+                            <label class="form-label fw-bold text-secondary">2. 위촉일자 필터링 (선택)</label>
                             <div class="d-flex align-items-center">
                                 <input type="date" id="startDate" class="form-control shadow-sm">
                                 <span class="mx-2 fw-bold">~</span>
                                 <input type="date" id="endDate" class="form-control shadow-sm">
                             </div>
-                            <div class="form-text mt-1">※ 비워두면 전체 기간의 데이터를 추출합니다.</div>
                         </div>
                     </div>
-
                     <div class="col-md-7">
                         <label class="form-label fw-bold text-secondary">3. 타겟 엑셀 데이터 (원시 엑셀 OR 백업 양식)</label>
                         <div id="dropZone" class="dropzone" onclick="document.getElementById('targetFile').click()">
                             <div class="dropzone-icon" id="dropIcon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
-                            <h4 class="fw-bold text-primary mb-2" id="dropTitle">여기로 엑셀 파일을 드래그 앤 드롭 하세요</h4>
-                            <p class="text-muted mb-0 fs-6" id="dropDesc">GA정보, MG인사관리 파일 또는 작업 중이던 백업 리스트 지원</p>
+                            <h4 class="fw-bold text-primary mb-2" id="dropTitle">여기로 엑셀 파일을 드래그 앤 드롭</h4>
                             <input type="file" id="targetFile" class="d-none" accept=".xlsx, .xls, .csv">
                         </div>
                     </div>
                 </div>
-                
                 <div class="text-center mt-4 pt-3 border-top">
-                    <button id="btnStart" class="btn btn-primary btn-lg px-5 py-2 fw-bold shadow" onclick="startParsingPipeline()" disabled>
-                        <i class="bi bi-magic"></i> 연락처 추출 시작
-                    </button>
+                    <button id="btnStart" class="btn btn-primary btn-lg px-5 py-2 fw-bold shadow" onclick="startParsingPipeline()" disabled><i class="bi bi-magic"></i> 연락처 추출 시작</button>
                 </div>
             </div>
         </div>
@@ -108,33 +82,47 @@
 
     <div id="workspaceArea" style="display: none;">
         
-        <div class="tool-bar mb-3 row align-items-center g-3">
-            <div class="col-lg-7">
-                <div class="d-flex align-items-center">
-                    <span class="badge bg-primary fs-6 me-2">이름 치환</span>
-                    <input type="text" id="findText" class="form-control me-2 shadow-sm" placeholder="A (기존 문자열)" style="width: 140px;" tabindex="1">
-                    <i class="bi bi-arrow-right fw-bold text-muted me-2"></i>
-                    <input type="text" id="replaceText" class="form-control me-2 shadow-sm" placeholder="B (변경 문자열)" style="width: 140px;" tabindex="2">
-                    <button class="btn btn-dark fw-bold shadow-sm me-3" onclick="applyReplaceRule()"><i class="bi bi-check2-square"></i> 적용</button>
-                    <span id="toastStatus" class="toast-status text-success"><i class="bi bi-check-circle-fill"></i> 치환 완료</span>
+        <div class="tool-bar mb-3">
+            <div class="row mb-3 align-items-center">
+                <div class="col-lg-5">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control border-primary" placeholder="리스트 다중 검색 (예: 에이플 잠실)">
+                    </div>
+                </div>
+                <div class="col-lg-7 d-flex justify-content-end align-items-center mt-2 mt-lg-0">
+                    <input type="file" id="ruleFile" class="d-none" accept=".json" onchange="loadPatternSet(event)">
+                    <div class="btn-group me-3 shadow-sm">
+                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="document.getElementById('ruleFile').click()"><i class="bi bi-upload"></i> 패턴 로드</button>
+                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSaveModal()"><i class="bi bi-download"></i> 패턴 저장</button>
+                    </div>
+                    <div class="btn-group shadow-sm" role="group">
+                        <input type="radio" class="btn-check" name="viewFilter" id="viewAll" autocomplete="off" checked>
+                        <label class="btn btn-outline-primary fw-bold" for="viewAll">전체 보기</label>
+                        <input type="radio" class="btn-check" name="viewFilter" id="viewWarning" autocomplete="off">
+                        <label class="btn btn-outline-danger fw-bold" for="viewWarning"><i class="bi bi-exclamation-triangle-fill"></i> 경고 모아보기</label>
+                    </div>
                 </div>
             </div>
-            
-            <div class="col-lg-5 d-flex justify-content-end align-items-center">
-                <input type="file" id="ruleFile" class="d-none" accept=".json" onchange="loadPatternSet(event)">
+
+            <div class="d-flex flex-wrap align-items-center gap-2 border-top pt-3">
+                <span class="badge bg-primary fs-6">치환</span>
+                <input type="text" id="findText" class="form-control form-control-sm shadow-sm" placeholder="A (찾을문자)" style="width: 120px;" tabindex="1">
+                <i class="bi bi-arrow-right text-muted"></i>
+                <input type="text" id="replaceText" class="form-control form-control-sm shadow-sm" placeholder="B (바꿀문자)" style="width: 120px;" tabindex="2">
+                <button class="btn btn-sm btn-dark fw-bold shadow-sm" onclick="applyReplaceRule()">적용</button>
                 
-                <div class="btn-group me-3 shadow-sm">
-                    <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="document.getElementById('ruleFile').click()"><i class="bi bi-upload"></i> 편집 패턴 로드</button>
-                    <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSaveModal()"><i class="bi bi-download"></i> 편집 패턴 저장</button>
-                </div>
+                <div class="vr mx-2"></div>
+                
+                <span class="badge bg-success fs-6">추가</span>
+                <select id="addPos" class="form-select form-select-sm shadow-sm" style="width: 90px;" tabindex="3">
+                    <option value="front">맨 앞</option>
+                    <option value="back">맨 뒤</option>
+                </select>
+                <input type="text" id="addText" class="form-control form-control-sm shadow-sm" placeholder="추가할 문자" style="width: 120px;" tabindex="4">
+                <button class="btn btn-sm btn-dark fw-bold shadow-sm" onclick="applyAddRule()">적용</button>
 
-                <div class="btn-group shadow-sm" role="group">
-                    <input type="radio" class="btn-check" name="viewFilter" id="viewAll" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary fw-bold" for="viewAll">전체 보기</label>
-
-                    <input type="radio" class="btn-check" name="viewFilter" id="viewWarning" autocomplete="off">
-                    <label class="btn btn-outline-danger fw-bold" for="viewWarning"><i class="bi bi-exclamation-triangle-fill"></i> 경고 모아보기</label>
-                </div>
+                <span id="toastStatus" class="toast-status text-success ms-3"><i class="bi bi-check-circle-fill"></i> 완료</span>
             </div>
         </div>
 
@@ -145,16 +133,12 @@
                     <span class="fw-bold fs-5 text-dark">연락처 편집 리스트</span>
                     <span id="ui_total_count" class="badge bg-secondary ms-2 fs-6">총 0명</span>
                 </div>
-                
                 <div class="d-flex align-items-center">
                     <select id="staffPositionSelect" class="form-select form-select-sm shadow-sm me-3" style="width: 280px;" onchange="changeStaffPosition()">
                         <option value="front" selected>[이름 앞] 예: [지점스탭] 굿리치 이현영</option>
                         <option value="back">[이름 뒤] 예: 굿리치 이현영 [지점스탭]</option>
                     </select>
-                    
-                    <div class="text-muted" style="font-size: 0.85rem;">
-                        범위 선택: <kbd>Shift</kbd> + 클릭
-                    </div>
+                    <div class="text-muted" style="font-size: 0.85rem;">Shift+클릭: 범위 선택</div>
                 </div>
             </div>
             
@@ -162,9 +146,7 @@
                 <table class="table table-hover table-sm mb-0 text-center align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 50px;">
-                                <input class="form-check-input" type="checkbox" id="chkAll" onchange="toggleAllCheckboxes()" checked>
-                            </th>
+                            <th style="width: 50px;"><input class="form-check-input" type="checkbox" id="chkAll" onchange="toggleAllCheckboxes()" checked></th>
                             <th style="width: 80px;">No.</th>
                             <th style="width: 450px;">임시저장이름 (편집 대상)</th>
                             <th style="width: 200px;">연락처</th>
@@ -173,7 +155,7 @@
                         </tr>
                     </thead>
                     <tbody id="contactTableBody">
-                        <tr><td colspan="6" class="text-muted py-5">상단에서 데이터 추출을 시작해주세요.</td></tr>
+                        <tr><td colspan="6" class="text-muted py-5">추출을 시작해주세요.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -181,21 +163,20 @@
     </div>
 </div>
 
-<div class="modal fade" id="patternModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="patternModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-light">
         <h5 class="modal-title fw-bold"><i class="bi bi-save-fill text-primary"></i> 편집 패턴 저장</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="text-muted small mb-3">저장할 치환 패턴(히스토리)을 선택하세요.</p>
-        <div id="patternListArea" class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
-            </div>
+        <p class="text-muted small mb-3">저장할 치환 및 추가 패턴(히스토리)을 선택하세요.</p>
+        <div id="patternListArea" class="border rounded p-2" style="max-height: 250px; overflow-y: auto;"></div>
       </div>
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">취소</button>
-        <button type="button" class="btn btn-primary fw-bold" onclick="downloadSelectedPatterns()">선택 패턴 다운로드(.json)</button>
+        <button type="button" class="btn btn-primary fw-bold" onclick="downloadSelectedPatterns()">선택 패턴 다운로드</button>
       </div>
     </div>
   </div>
@@ -207,232 +188,179 @@
     let globalData = [];
     let filteredData = [];
     let lastCheckedIndex = -1;
-    let patternHistory = []; // 치환 히스토리 배열 [{find: 'A', replace: 'B'}]
-    let toastTimeout; // 상태바 애니메이션 타이머
+    let patternHistory = []; 
+    let toastTimeout; 
 
-    // --- 1. 초기화 (GRM_Data.xlsx 로드) ---
     window.addEventListener('DOMContentLoaded', async () => {
         const grmSelect = document.getElementById('grmIdSelect');
         const noticeBadge = document.getElementById('initNotice');
-        
         try {
-            const cacheBuster = `?v=${Date.now()}`;
-            const response = await fetch('./GRM_Data.xlsx' + cacheBuster);
+            const response = await fetch('./GRM_Data.xlsx?v=' + Date.now());
             if(!response.ok) throw new Error("GRM_Data 파일 누락");
-            
-            const arrayBuffer = await response.arrayBuffer();
-            const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+            const wb = XLSX.read(new Uint8Array(await response.arrayBuffer()), { type: 'array' });
             const grmData = XLSX.utils.sheet_to_json(wb.Sheets["GRM별_지점코드"], {header: 1});
             
             let selectHtml = `<option value="">-- GRM 담당자를 선택하세요 --</option>`;
             for(let c = 0; c < grmData[0].length; c++) {
                 let code = String(grmData[0][c] || "").trim();
                 let name = String(grmData[1][c] || "").trim();
-                
                 if(code) {
                     let bSet = new Set();
-                    for(let r = 2; r < grmData.length; r++) {
-                        let bCode = String(grmData[r][c] || "").trim();
-                        if(bCode) bSet.add(bCode);
-                    }
+                    for(let r = 2; r < grmData.length; r++) if(grmData[r][c]) bSet.add(String(grmData[r][c]).trim());
                     globalGrmMap.set(code, bSet);
                     if(name && code !== name) selectHtml += `<option value="${code}">${name} (${code})</option>`;
                 }
             }
             grmSelect.innerHTML = selectHtml;
-            grmSelect.disabled = false;
-            document.getElementById('btnStart').disabled = false;
-            
-            noticeBadge.innerText = "연동 완료";
-            noticeBadge.classList.replace('bg-warning', 'bg-success');
+            grmSelect.disabled = document.getElementById('btnStart').disabled = false;
+            noticeBadge.innerText = "연동 완료"; noticeBadge.classList.replace('bg-warning', 'bg-success');
         } catch(error) {
-            noticeBadge.innerText = "GRM_Data.xlsx 파일 누락";
-            noticeBadge.classList.replace('bg-warning', 'bg-danger');
+            noticeBadge.innerText = "GRM_Data 누락"; noticeBadge.classList.replace('bg-warning', 'bg-danger');
         }
 
-        // 엔터키 치환 단축키 바인딩
-        document.getElementById('replaceText').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); applyReplaceRule(); }
-        });
+        // 단축키 바인딩
+        document.getElementById('replaceText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyReplaceRule(); } });
+        document.getElementById('addText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyAddRule(); } });
+        
+        // 검색창 실시간 필터링 이벤트
+        document.getElementById('searchInput').addEventListener('input', applyViewFilter);
+        document.getElementById('viewAll').addEventListener('change', applyViewFilter);
+        document.getElementById('viewWarning').addEventListener('change', applyViewFilter);
     });
 
-    // --- 2. Dropzone UI ---
     const dropZone = document.getElementById('dropZone');
     const targetFileInput = document.getElementById('targetFile');
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
-    dropZone.addEventListener('drop', (e) => {
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
         e.preventDefault(); dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length) { targetFileInput.files = e.dataTransfer.files; handleFileSelect({target: targetFileInput}); }
     });
-
     function handleFileSelect(e) {
         if(e.target.files.length > 0) {
-            document.getElementById('dropIcon').innerHTML = '<i class="bi bi-check-circle-fill"></i>';
-            document.getElementById('dropIcon').classList.replace('text-primary', 'text-success');
+            document.getElementById('dropIcon').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
             document.getElementById('dropTitle').innerText = e.target.files[0].name;
             document.getElementById('dropTitle').classList.replace('text-primary', 'text-success');
         }
     }
 
-    // --- 3. 데이터 파싱 파이프라인 ---
     function startParsingPipeline() {
         const grmId = document.getElementById('grmIdSelect').value.trim();
         const targetFile = targetFileInput.files[0];
-        
         let startD = document.getElementById('startDate').value.replace(/-/g, "");
         let endD = document.getElementById('endDate').value.replace(/-/g, "");
 
-        if(!grmId) return alert("GRM 담당자를 선택해주세요.");
-        if(!targetFile) return alert("타겟 데이터 엑셀 파일을 업로드해주세요.");
-
-        const branchSet = globalGrmMap.get(grmId);
-        if(!branchSet) return alert("지점코드 매핑 데이터가 없습니다.");
-
+        if(!grmId || !targetFile) return alert("GRM 및 엑셀 파일을 세팅해주세요.");
         document.getElementById('loadingSpinner').style.display = 'flex';
 
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const fileBuffer = e.target.result;
+        reader.onload = e => {
             const worker = new Worker('worker.js');
-            
-            worker.onmessage = (msg) => {
+            worker.onmessage = msg => {
                 if(msg.data.status === 'success') {
                     globalData = msg.data.data;
                     applyViewFilter(); 
-                    
                     document.getElementById('setupPanel').classList.remove('show');
                     document.getElementById('workspaceArea').style.display = 'block';
                     document.getElementById('exportBtnGroup').style.display = 'inline-flex';
-                } else {
-                    alert('파싱 오류: ' + msg.data.message);
-                }
+                } else alert('파싱 오류: ' + msg.data.message);
                 document.getElementById('loadingSpinner').style.display = 'none';
                 worker.terminate(); 
             };
-            worker.postMessage({ fileBuffer, branchArray: Array.from(branchSet), startDate: startD, endDate: endD }, [fileBuffer]);
+            worker.postMessage({ fileBuffer: e.target.result, branchArray: Array.from(globalGrmMap.get(grmId)), startDate: startD, endDate: endD }, [e.target.result]);
         };
         reader.readAsArrayBuffer(targetFile);
     }
 
-    // --- 4. 렌더링 및 UI 조작부 ---
-    document.getElementById('viewAll').addEventListener('change', applyViewFilter);
-    document.getElementById('viewWarning').addEventListener('change', applyViewFilter);
-
+    // --- 강력한 다중 교차 필터 엔진 ---
     function applyViewFilter() {
         const isWarningOnly = document.getElementById('viewWarning').checked;
-        if(isWarningOnly) {
-            filteredData = globalData.filter(d => d.tempName.length >= 17);
-        } else {
-            filteredData = globalData;
-        }
+        const searchStr = document.getElementById('searchInput').value.trim().toLowerCase();
+        const keywords = searchStr ? searchStr.split(/\s+/) : []; // 공백 기준 배열 분리
+
+        filteredData = globalData.filter(d => {
+            if (isWarningOnly && d.tempName.length < 17) return false;
+            if (keywords.length > 0) {
+                const targetText = d.tempName.toLowerCase();
+                // 모든 키워드가 tempName에 포함되어야 함 (AND 검색)
+                if (!keywords.every(kw => targetText.includes(kw))) return false;
+            }
+            return true;
+        });
         renderTable();
     }
 
     function renderTable() {
         const tbody = document.getElementById('contactTableBody');
-        let htmlChunks = [];
-
         if(filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-5">표시할 데이터가 없습니다.</td></tr>`;
-            document.getElementById('ui_total_count').innerText = "총 0명";
-            return;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-5">검색 결과가 없습니다.</td></tr>`;
+            document.getElementById('ui_total_count').innerText = "총 0명"; return;
         }
 
+        let htmlChunks = [];
         for(let i=0; i<filteredData.length; i++) {
             const d = filteredData[i];
             const len = d.tempName.length;
-            let badgeHtml = "";
-            
-            // 16자 이하는 뱃지 숨김, 17자 이상부터 표기
-            if(len >= 21) {
-                badgeHtml = `<span class="badge ms-1" style="background-color: #dc3545; color: white;">(${len}자)</span>`;
-            } else if(len >= 17) {
-                badgeHtml = `<span class="badge ms-1" style="background-color: #ffc107; color: black;">(${len}자)</span>`;
-            }
+            let badgeHtml = len >= 21 ? `<span class="badge ms-1" style="background-color: #dc3545; color: white;">(${len}자)</span>` : 
+                            len >= 17 ? `<span class="badge ms-1" style="background-color: #ffc107; color: black;">(${len}자)</span>` : "";
 
             htmlChunks.push(`
                 <tr onclick="handleRowClick(event, ${i})">
-                    <td><input class="form-check-input row-chk" type="checkbox" data-idx="${i}" ${d.selected ? 'checked' : ''} onclick="event.stopPropagation(); toggleSingleCheck(${i}, event)"></td>
-                    <td>${i + 1}</td>
-                    <td class="text-start fw-bold">${d.tempName} ${badgeHtml}</td>
-                    <td>${d.phone}</td>
-                    <td>${d.id}</td>
-                    <td>${d.role}</td>
+                    <td><input class="form-check-input row-chk" type="checkbox" data-idx="${i}" ${d.selected?'checked':''} onclick="event.stopPropagation(); toggleSingleCheck(${i}, event)"></td>
+                    <td>${i + 1}</td><td class="text-start fw-bold">${d.tempName} ${badgeHtml}</td>
+                    <td>${d.phone}</td><td>${d.id}</td><td>${d.role}</td>
                 </tr>
             `);
         }
-
         tbody.innerHTML = htmlChunks.join('');
         document.getElementById('ui_total_count').innerText = `총 ${filteredData.length}명`;
-        
-        const allChecked = filteredData.length > 0 && filteredData.every(d => d.selected);
-        document.getElementById('chkAll').checked = allChecked;
+        document.getElementById('chkAll').checked = filteredData.length > 0 && filteredData.every(d => d.selected);
     }
 
     function toggleSingleCheck(index, event) {
-        const currentData = filteredData[index];
-        currentData.selected = !currentData.selected;
-
+        filteredData[index].selected = !filteredData[index].selected;
         if (event.shiftKey && lastCheckedIndex !== -1) {
-            const start = Math.min(lastCheckedIndex, index);
-            const end = Math.max(lastCheckedIndex, index);
-            for (let i = start; i <= end; i++) { filteredData[i].selected = currentData.selected; }
+            const start = Math.min(lastCheckedIndex, index), end = Math.max(lastCheckedIndex, index);
+            for (let i = start; i <= end; i++) filteredData[i].selected = filteredData[index].selected;
             renderTable(); 
         }
         lastCheckedIndex = index;
         document.getElementById('chkAll').checked = filteredData.every(d => d.selected);
     }
+    function handleRowClick(event, index) { if (event.target.type !== 'checkbox') { const c = document.querySelector(`.row-chk[data-idx="${index}"]`); if(c) c.click(); } }
+    function toggleAllCheckboxes() { const isC = document.getElementById('chkAll').checked; filteredData.forEach(d => d.selected = isC); Array.from(document.querySelectorAll('.row-chk')).forEach(b => b.checked = isC); }
 
-    function handleRowClick(event, index) {
-        if (event.target.type !== 'checkbox') {
-            const chk = document.querySelector(`.row-chk[data-idx="${index}"]`);
-            if(chk) chk.click(); 
-        }
-    }
-
-    function toggleAllCheckboxes() {
-        const isChecked = document.getElementById('chkAll').checked;
-        filteredData.forEach(d => d.selected = isChecked);
-        const boxes = document.querySelectorAll('.row-chk');
-        boxes.forEach(box => box.checked = isChecked);
-    }
-
-    // --- 5. 직급 텍스트 동적 이동 (수동 치환본 유지 보호 로직) ---
-    function changeStaffPosition() {
-        const pos = document.getElementById('staffPositionSelect').value; // 'front' or 'back'
-        
-        globalData.forEach(d => {
+    // --- 핵심: 직급 태그 우선순위 재정렬 함수 ---
+    function realignStaffPosition(list = globalData) {
+        const pos = document.getElementById('staffPositionSelect').value;
+        list.forEach(d => {
             if(d.role && d.role !== '판매인(GA)') {
                 const roleTag = `[${d.role}]`;
-                // 기존 이름에서 앞/뒤에 있는 roleTag를 찾아 깨끗하게 제거
-                let cleanName = d.tempName.replace(new RegExp(`^\\s*\\${roleTag}\\s*|\\s*\\${roleTag}\\s*$`, 'g'), '').trim();
+                // 정규식을 이용해 앞이나 뒤에 있는 roleTag만 제거 (문자열 중간에러 방지)
+                const escapedTag = roleTag.replace(/[\[\]]/g, '\\$&');
+                const regex = new RegExp(`^\\s*${escapedTag}\\s*|\\s*${escapedTag}\\s*$`, 'g');
+                let cleanName = d.tempName.replace(regex, '').trim();
                 
-                // 선택된 위치에 맞게 재조립
-                if(pos === 'front') {
-                    d.tempName = `${roleTag} ${cleanName}`;
-                } else {
-                    d.tempName = `${cleanName} ${roleTag}`;
-                }
+                if(pos === 'front') d.tempName = `${roleTag} ${cleanName}`;
+                else d.tempName = `${cleanName} ${roleTag}`;
             }
         });
-        applyViewFilter(); // 재렌더링
     }
+    function changeStaffPosition() { realignStaffPosition(); applyViewFilter(); }
 
-    // --- 6. 이름 치환 및 패턴 관리 ---
     function showToastMessage(msg) {
         const toast = document.getElementById('toastStatus');
         toast.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${msg}`;
         toast.classList.add('show');
         clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
+    // --- 치환(Replace) 및 추가(Add) 로직 ---
     function applyReplaceRule(findStr = null, replaceStr = null, fromPattern = false) {
         const fStr = findStr !== null ? findStr : document.getElementById('findText').value;
         const rStr = replaceStr !== null ? replaceStr : document.getElementById('replaceText').value;
-        
-        if(!fStr) return; // 찾을 단어가 없으면 무시
+        if(!fStr) return;
         
         let changedCount = 0;
         const targetList = filteredData.filter(d => d.selected);
@@ -444,82 +372,87 @@
                 changedCount++;
             }
         });
+        realignStaffPosition(loopList); // 변경 후 직급 태그 바깥으로 밀어내기
 
-        // 수동 입력일 경우 히스토리에 저장 및 인풋창 포커스 원복
         if(!fromPattern) {
-            patternHistory.push({ find: fStr, replace: rStr });
-            document.getElementById('findText').value = '';
-            document.getElementById('replaceText').value = '';
+            patternHistory.push({ type: 'replace', find: fStr, replace: rStr });
+            document.getElementById('findText').value = document.getElementById('replaceText').value = '';
             document.getElementById('findText').focus();
         }
-
-        renderTable(); 
-        showToastMessage(`[${fStr}] 치환 (${changedCount}건 적용)`);
+        renderTable(); showToastMessage(`[${fStr}] 치환 완료`);
     }
 
-    // 패턴 모달 열기
+    function applyAddRule(pos = null, text = null, fromPattern = false) {
+        const aPos = pos !== null ? pos : document.getElementById('addPos').value;
+        const aStr = text !== null ? text : document.getElementById('addText').value;
+        if(!aStr) return;
+
+        let changedCount = 0;
+        const targetList = filteredData.filter(d => d.selected);
+        const loopList = targetList.length > 0 ? targetList : filteredData;
+
+        loopList.forEach(d => {
+            if (aPos === 'front') d.tempName = aStr + " " + d.tempName;
+            else d.tempName = d.tempName + " " + aStr;
+            d.tempName = d.tempName.replace(/\s+/g, ' ').trim();
+            changedCount++;
+        });
+        realignStaffPosition(loopList); // 추가 후 직급 태그 밖으로 밀어내기 보장
+
+        if(!fromPattern) {
+            patternHistory.push({ type: 'add', pos: aPos, text: aStr });
+            document.getElementById('addText').value = '';
+            document.getElementById('addText').focus();
+        }
+        renderTable(); showToastMessage(`[${aStr}] 추가 완료`);
+    }
+
+    // --- 패턴 JSON 관리 ---
     function openPatternSaveModal() {
         const listArea = document.getElementById('patternListArea');
-        if(patternHistory.length === 0) {
-            listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 치환 기록이 없습니다.</div>`;
-        } else {
+        if(patternHistory.length === 0) listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 기록이 없습니다.</div>`;
+        else {
             let html = `<ul class="list-group list-group-flush">`;
             patternHistory.forEach((p, idx) => {
-                html += `
-                <li class="list-group-item d-flex align-items-center">
-                    <input class="form-check-input me-3 pattern-chk" type="checkbox" value="${idx}" checked>
-                    <span><strong>[${p.find}]</strong> <i class="bi bi-arrow-right mx-1 text-muted"></i> [${p.replace}]</span>
-                </li>`;
+                let text = p.type === 'replace' ? `<strong>[${p.find}]</strong> <i class="bi bi-arrow-right mx-1 text-muted"></i> [${p.replace}]` : 
+                           `<span class="badge bg-success me-1">추가</span> [${p.pos === 'front' ? '맨 앞' : '맨 뒤'}] <strong>${p.text}</strong>`;
+                html += `<li class="list-group-item d-flex align-items-center"><input class="form-check-input me-3 pattern-chk" type="checkbox" value="${idx}" checked><span>${text}</span></li>`;
             });
-            html += `</ul>`;
-            listArea.innerHTML = html;
+            listArea.innerHTML = html + `</ul>`;
         }
-        
-        const modal = new bootstrap.Modal(document.getElementById('patternModal'));
-        modal.show();
+        new bootstrap.Modal(document.getElementById('patternModal')).show();
     }
 
-    // 선택된 패턴 JSON 다운로드
     function downloadSelectedPatterns() {
         const chks = document.querySelectorAll('.pattern-chk:checked');
-        if(chks.length === 0) return alert("저장할 패턴을 1개 이상 선택하세요.");
-
-        const selectedPatterns = Array.from(chks).map(chk => patternHistory[parseInt(chk.value)]);
-        
-        const blob = new Blob([JSON.stringify(selectedPatterns, null, 2)], { type: "application/json" });
+        if(chks.length === 0) return alert("패턴을 1개 이상 선택하세요.");
+        const blob = new Blob([JSON.stringify(Array.from(chks).map(c => patternHistory[parseInt(c.value)]), null, 2)], { type: "application/json" });
         saveAs(blob, `치환패턴_${Date.now()}.json`);
-        
         bootstrap.Modal.getInstance(document.getElementById('patternModal')).hide();
     }
 
-    // 패턴 로드 (JSON)
     function loadPatternSet(event) {
         const file = event.target.files[0];
         if(!file) return;
-
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = e => {
             try {
-                const patterns = JSON.parse(e.target.result);
-                if(Array.isArray(patterns)) {
-                    patterns.forEach(p => {
-                        if(p.find !== undefined && p.replace !== undefined) {
-                            applyReplaceRule(p.find, p.replace, true); // true: 히스토리 중복저장 방지
-                        }
+                const ptns = JSON.parse(e.target.result);
+                if(Array.isArray(ptns)) {
+                    ptns.forEach(p => {
+                        if(p.type === 'replace' && p.find !== undefined) applyReplaceRule(p.find, p.replace || '', true);
+                        else if(p.type === 'add' && p.text) applyAddRule(p.pos || 'back', p.text, true);
                     });
-                    event.target.value = ''; // 초기화
+                    event.target.value = ''; alert('패턴 적용 완료');
                 }
-            } catch(err) {
-                alert("잘못된 패턴 파일입니다.");
-            }
+            } catch(err) { alert("잘못된 패턴 파일입니다."); }
         };
         reader.readAsText(file);
     }
 
-    // (Phase 3 예약)
-    function exportExcelBackup() { alert('Phase 3 (다음 단계) 에서 엑셀/까톡/vCard 다운로드가 완벽 연결됩니다.'); }
-    function exportKaTalk() { alert('Phase 3 (다음 단계) 에서 엑셀/까톡/vCard 다운로드가 완벽 연결됩니다.'); }
-    function exportVCard() { alert('Phase 3 (다음 단계) 에서 엑셀/까톡/vCard 다운로드가 완벽 연결됩니다.'); }
+    function exportExcelBackup() { alert('Phase 3 (다음) 에서 구현'); }
+    function exportKaTalk() { alert('Phase 3 (다음) 에서 구현'); }
+    function exportVCard() { alert('Phase 3 (다음) 에서 구현'); }
 </script>
 </body>
 </html>
