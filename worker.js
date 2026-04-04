@@ -1,4 +1,4 @@
-// worker.js (v1.5.0 - 스마트 병합 엔진)
+// worker.js (v0.7.1 - 실시간 진행률 보고 및 스마트 병합 엔진)
 importScripts('https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js');
 
 self.onmessage = function(e) {
@@ -6,15 +6,19 @@ self.onmessage = function(e) {
     
     try {
         const branchSet = new Set(branchArray);
+        
+        // 1단계: 바이너리 해독 (이 구간은 퍼센트를 측정할 수 없어 UI가 대기함)
         const wb = XLSX.read(fileBuffer, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
         
         let resultMap = new Map();
         let isBackup = (rows[0] && rows[0][0] === "임시저장이름" && rows[0][1] === "연락처");
+        const totalRows = rows.length;
 
+        // 2단계: 데이터 추출 및 병합 (여기서부터 1,000건 단위로 진행률 보고)
         if (isBackup) {
-            for (let i = 1; i < rows.length; i++) {
+            for (let i = 1; i < totalRows; i++) {
                 const row = rows[i];
                 if (!row[0] && !row[1]) continue;
                 
@@ -27,9 +31,12 @@ self.onmessage = function(e) {
                 if (!resultMap.has(key)) {
                     resultMap.set(key, { tempName, phone, id, role, selected: true, isMerged: false }); 
                 }
+
+                // 1,000건마다 진행률 발송 (메인 스레드 과부하 방지)
+                if (i % 1000 === 0) self.postMessage({ status: 'progress', current: i, total: totalRows });
             }
         } else {
-            for (let i = 1; i < rows.length; i++) {
+            for (let i = 1; i < totalRows; i++) {
                 const row = rows[i];
                 const branchCode = String(row[11]).trim();
                 
@@ -74,7 +81,7 @@ self.onmessage = function(e) {
                     if (!resultMap.has(phoneKey)) {
                         resultMap.set(phoneKey, { tempName, phone, id: agentId, role, selected: true, isMerged: false });
                     } else {
-                        // ★ 스마트 병합(Merge) 엔진
+                        // 스마트 병합 로직
                         let existing = resultMap.get(phoneKey);
                         
                         if (role && !existing.role.includes(role)) {
@@ -90,11 +97,9 @@ self.onmessage = function(e) {
                             let curr = parseId(existing.id);
                             let next = parseId(agentId);
                             
-                            // 사번 중복 제거 및 결합
                             let empSet = new Set(curr.emp ? curr.emp.split(',').map(s=>s.trim()) : []);
                             if(next.emp) empSet.add(next.emp);
                             
-                            // 생년월일코드 중복 제거 및 결합
                             let birthSet = new Set(curr.birth ? curr.birth.split(',').map(s=>s.trim()) : []);
                             if(next.birth) birthSet.add(next.birth);
                             
@@ -103,8 +108,13 @@ self.onmessage = function(e) {
                         existing.isMerged = true; 
                     }
                 }
+                
+                if (i % 1000 === 0) self.postMessage({ status: 'progress', current: i, total: totalRows });
             }
         }
+        
+        // 최종 100% 완료 발송 후 데이터 반환
+        self.postMessage({ status: 'progress', current: totalRows, total: totalRows });
         self.postMessage({ status: 'success', data: Array.from(resultMap.values()) });
 
     } catch(err) {

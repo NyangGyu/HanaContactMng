@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v0.7.0</title>
+    <title>Hana 연락처 정리 도우미 v0.7.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -15,7 +15,7 @@
         .dropzone { border: 3px dashed #0d6efd; border-radius: 10px; background-color: #f8f9fa; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .dropzone.dragover { background-color: #e2eefd; border-color: #0a58ca; transform: scale(1.01); }
         .dropzone-icon { font-size: 2.5rem; color: #0d6efd; margin-bottom: 10px; }
-        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 9999; justify-content: center; align-items: center; color: white; flex-direction: column; }
+        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 9999; justify-content: center; align-items: center; color: white; flex-direction: column; }
         .table-scroll-area { max-height: 600px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; }
         .table-scroll-area thead th { position: sticky; top: 0; z-index: 1; background-color: #f8f9fa; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .tool-bar { background-color: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #0d6efd; }
@@ -31,14 +31,23 @@
 <div class="spinner-overlay" id="loadingSpinner">
     <div class="spinner-border text-primary mb-3" style="width: 4rem; height: 4rem;"></div>
     <h3 id="loadingText" class="fw-bold">데이터를 처리 중입니다...</h3>
+    
+    <div class="w-50 mt-4" style="max-width: 500px;">
+        <div class="progress" style="height: 25px; border-radius: 15px; background-color: #333;">
+            <div id="loadingProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success fw-bold fs-6" role="progressbar" style="width: 0%;">0%</div>
+        </div>
+        <p id="loadingProgressText" class="text-center mt-3 mb-0 fw-bold fs-5 text-warning">
+            <i class="bi bi-cpu-fill"></i> 엑셀 바이너리 암호 해독 중... (잠시만 대기해 주세요)
+        </p>
+    </div>
 </div>
 
 <div class="container-fluid px-4 mt-4 mb-5" id="mainContainer">
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.0</span></h2>
-            <p class="text-primary fw-bold mb-0 mt-1"><i class="bi bi-balloon-heart-fill"></i> 소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.1</span></h2>
+            <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
             <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
@@ -115,13 +124,10 @@
                     <div class="btn-group shadow-sm" role="group">
                         <input type="radio" class="btn-check" name="viewFilter" id="viewAll" autocomplete="off" checked>
                         <label class="btn btn-outline-primary fw-bold" for="viewAll">전체</label>
-
                         <input type="radio" class="btn-check" name="viewFilter" id="viewNew" autocomplete="off">
                         <label class="btn btn-outline-success fw-bold" for="viewNew">신규</label>
-
                         <input type="radio" class="btn-check" name="viewFilter" id="viewDup" autocomplete="off">
                         <label class="btn btn-outline-secondary fw-bold" for="viewDup">중복</label>
-
                         <input type="radio" class="btn-check" name="viewFilter" id="viewWarning" autocomplete="off">
                         <label class="btn btn-outline-danger fw-bold" for="viewWarning"><i class="bi bi-exclamation-triangle-fill"></i> 경고</label>
                     </div>
@@ -217,7 +223,7 @@
         <h4 class="text-danger fw-bold text-center mb-3">
             <i class="bi bi-cloud-slash-fill"></i> 절대 안심하세요!
         </h4>
-        <p class="text-center fw-bold mb-4">업로드하시는 연락처는 어떠한 서버로도 전송되지 않으며,<br>오직 고객님의 PC 안에서만 안전하게 비교됩니다.</p>
+        <p class="text-center fw-bold mb-4">업로드하시는 연락처는 어떠한 서버로도 전송되지 않으며,<br>오직 사용자의 PC 안에서만 안전하게 비교됩니다.</p>
         
         <div class="alert alert-light border shadow-sm mb-0">
             <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-question-circle-fill text-info"></i> 내 스마트폰 연락처 파일 준비하는 방법</h6>
@@ -225,7 +231,7 @@
                 <li>스마트폰 <b>[연락처]</b> 어플을 켭니다.</li>
                 <li>화면의 <b>[점 3개]</b>(또는 줄 3개)를 누르고 <b>[설정]</b>(또는 연락처 관리)에 들어갑니다.</li>
                 <li><b>[연락처 내보내기]</b>를 선택하고 <b>[내장 저장공간]</b>을 골라 내보냅니다.</li>
-                <li>스마트폰 <b>[내 파일] > [Download]</b> 폴더에 저장된 파일(.vcf)을 PC로 가져옵니다. (카톡 내게쓰기, 메일 등 활용)</li>
+                <li>스마트폰 <b>[내 파일] > [Download]</b> 폴더에 저장된 파일(.vcf)을 PC로 가져옵니다. (메일 등 활용. 카톡 전송은 VCF 파일 올리면 연락처 1개만 표시되서 전송 안됨)</li>
                 <li>아래 <b>[확인 및 파일 첨부]</b> 버튼을 눌러 그 파일을 올려주세요!</li>
             </ol>
         </div>
@@ -370,6 +376,13 @@
         }
     }
 
+    function initProgressBar() {
+        document.getElementById('loadingProgressBar').style.width = '0%';
+        document.getElementById('loadingProgressBar').innerText = '0%';
+        document.getElementById('loadingProgressText').innerHTML = '<i class="bi bi-cpu-fill"></i> 엑셀 바이너리 암호 해독 중... (잠시만 대기해 주세요)';
+        document.getElementById('loadingSpinner').style.display = 'flex';
+    }
+
     function startParsingPipeline() {
         const grmId = document.getElementById('grmIdSelect').value.trim();
         const targetFile = targetFileInput.files[0];
@@ -377,13 +390,21 @@
         let endD = document.getElementById('endDate').value.replace(/-/g, "");
 
         if(!grmId || !targetFile) return alert("GRM 및 엑셀 파일을 세팅해주세요.");
-        document.getElementById('loadingSpinner').style.display = 'flex';
+        
+        initProgressBar(); // 진행률 UI 초기화 및 노출
 
         const reader = new FileReader();
         reader.onload = e => {
             const worker = new Worker('worker.js');
             worker.onmessage = msg => {
-                if(msg.data.status === 'success') {
+                if(msg.data.status === 'progress') {
+                    // 진행률 퍼센트 계산 및 화면 업데이트
+                    const percent = Math.round((msg.data.current / msg.data.total) * 100);
+                    document.getElementById('loadingProgressBar').style.width = percent + '%';
+                    document.getElementById('loadingProgressBar').innerText = percent + '%';
+                    document.getElementById('loadingProgressText').innerHTML = `<i class="bi bi-person-lines-fill"></i> 연락처 추출 및 스마트 병합 중... (${msg.data.current.toLocaleString()} / ${msg.data.total.toLocaleString()})`;
+                
+                } else if(msg.data.status === 'success') {
                     globalData = msg.data.data;
                     undoStack = []; redoStack = []; patternHistory = [];
                     updateHistoryButtons();
@@ -395,9 +416,14 @@
                     document.getElementById('setupPanel').classList.remove('show');
                     document.getElementById('workspaceArea').style.display = 'block';
                     document.getElementById('exportBtnGroup').style.display = 'inline-flex';
-                } else alert('파싱 오류: ' + msg.data.message);
-                document.getElementById('loadingSpinner').style.display = 'none';
-                worker.terminate(); 
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    worker.terminate(); 
+
+                } else {
+                    alert('파싱 오류: ' + msg.data.message);
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    worker.terminate();
+                }
             };
             worker.postMessage({ fileBuffer: e.target.result, branchArray: Array.from(globalGrmMap.get(grmId)), startDate: startD, endDate: endD }, [e.target.result]);
         };
@@ -410,12 +436,8 @@
     }
 
     function triggerVcfUpload() {
-        // 모달 닫기
         bootstrap.Modal.getInstance(document.getElementById('vcfGuideModal')).hide();
-        // 팝업 닫히는 애니메이션을 위해 약간의 딜레이 후 파일선택창 띄움
-        setTimeout(() => {
-            document.getElementById('vcfPhoneFile').click();
-        }, 300);
+        setTimeout(() => { document.getElementById('vcfPhoneFile').click(); }, 300);
     }
 
     function normalizePhone(phoneStr) {
@@ -429,6 +451,7 @@
         if(!file) return;
         
         document.getElementById('loadingSpinner').style.display = 'flex';
+        document.getElementById('loadingProgressText').innerText = "폰 연락처 교차 검증 중...";
 
         const reader = new FileReader();
         reader.onload = e => {
@@ -462,14 +485,10 @@
     }
 
     function applyVcfExclude() {
-        globalData.forEach(d => {
-            if(d.isVcfDup) d.selected = false;
-        });
-        
+        globalData.forEach(d => { if(d.isVcfDup) d.selected = false; });
         bootstrap.Modal.getInstance(document.getElementById('vcfSyncModal')).hide();
         document.getElementById('viewNew').checked = true;
         applyViewFilter();
-        
         showToastMessage("중복 연락처가 제외되고 신규 대상만 필터링 되었습니다.", "primary");
     }
 
@@ -552,7 +571,6 @@
     function handleRowClick(event, index) { if (event.target.type !== 'checkbox') { const c = document.querySelector(`.row-chk[data-idx="${index}"]`); if(c) c.click(); } }
     function toggleAllCheckboxes() { const isC = document.getElementById('chkAll').checked; filteredData.forEach(d => d.selected = isC); Array.from(document.querySelectorAll('.row-chk')).forEach(b => b.checked = isC); updateCountUI(); }
 
-    // --- 수동 개별 편집 ---
     function openManualEditModal(index) {
         const d = filteredData[index];
         document.getElementById('editIndex').value = index;
@@ -684,7 +702,7 @@
         }
     }
 
-    // --- 패턴 관련 함수들 ---
+    // --- 패턴 관련 함수 ---
     function openPatternSaveModal() { const listArea = document.getElementById('patternSaveListArea'); if(patternHistory.length === 0) listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 기록이 없습니다.</div>`; else { let html = `<ul class="list-group list-group-flush">`; patternHistory.forEach((p, idx) => { let text = ""; if(p.type === 'replace') { text = `<span class="badge bg-primary me-2">치환</span> <strong>[${p.find}]</strong> <i class="bi bi-arrow-right mx-1 text-muted"></i> [${p.replace}]`; } else { let tBadge = p.target === 'memo' ? `<span class="badge bg-secondary me-1">메모</span>` : `<span class="badge bg-success me-1">이름</span>`; text = `${tBadge} <span class="badge bg-dark me-2">추가</span> [${p.pos === 'front' ? '맨 앞' : '맨 뒤'}] <strong>${p.text}</strong> ${p.useSpace ? '(띄어쓰기)' : ''}`; } html += `<li class="list-group-item d-flex align-items-center"><input class="form-check-input me-3 pattern-save-chk" type="checkbox" value="${idx}" checked><span>${text}</span></li>`; }); listArea.innerHTML = html + `</ul>`; } new bootstrap.Modal(document.getElementById('patternSaveModal')).show(); }
     function downloadSelectedSavePatterns() { const chks = document.querySelectorAll('.pattern-save-chk:checked'); if(chks.length === 0) return alert("패턴을 1개 이상 선택하세요."); const blob = new Blob([JSON.stringify(Array.from(chks).map(c => patternHistory[parseInt(c.value)]), null, 2)], { type: "application/json" }); saveAs(blob, `편집패턴_${Date.now()}.json`); bootstrap.Modal.getInstance(document.getElementById('patternSaveModal')).hide(); }
     function readPatternFile(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = e => { try { const ptns = JSON.parse(e.target.result); if(Array.isArray(ptns)) { tempLoadPatterns = ptns; renderLoadPatternModal(); } event.target.value = ''; } catch(err) { alert("잘못된 패턴 파일입니다."); } }; reader.readAsText(file); }
