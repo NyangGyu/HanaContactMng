@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.4.1</title>
+    <title>Hana 연락처 정리 도우미 v1.5.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -23,6 +23,9 @@
         .toast-status.show { opacity: 1; }
         .clear-btn { cursor: pointer; color: #6c757d; pointer-events: auto !important; }
         .clear-btn:hover { color: #dc3545; }
+        
+        /* 더블클릭 힌트 애니메이션 CSS */
+        .table-hover tbody tr:hover { background-color: #eef2f5; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -36,8 +39,8 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.4.1</span></h2>
-            <p class="text-muted mb-0 mt-1">vCard 규격 최적화 및 연락처 기반 중복 통합 엔진이 적용된 마스터 버전.</p>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.5.0</span></h2>
+            <p class="text-muted mb-0 mt-1">개별 수동 편집, 선택 카운터, 스마트 생년월일 중복 제거 엔진 탑재.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
             <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
@@ -159,7 +162,7 @@
                         <option value="memo_back">[메모 뒤] 예: G1234 / 801212-3 [지점스탭]</option>
                         <option value="none">[삽입 안 함] (직급 표기 제거)</option>
                     </select>
-                    <div class="text-muted" style="font-size: 0.85rem;">Shift+클릭: 범위 선택</div>
+                    <div class="text-muted" style="font-size: 0.85rem;">행(Row) 더블클릭: 개별 수동 편집</div>
                 </div>
             </div>
             
@@ -168,7 +171,11 @@
                     <colgroup>
                         <col style="width: 50px;">  
                         <col style="width: 60px;">  
-                        <col>                       <col style="width: 140px;"> <col style="width: 380px;"> <col style="width: 110px;"> </colgroup>
+                        <col>                       
+                        <col style="width: 140px;"> 
+                        <col style="width: 380px;"> 
+                        <col style="width: 110px;"> 
+                    </colgroup>
                     <thead class="table-light">
                         <tr>
                             <th><input class="form-check-input" type="checkbox" id="chkAll" onchange="toggleAllCheckboxes()" checked></th>
@@ -186,6 +193,36 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="modal fade" id="manualEditModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title fw-bold text-dark"><i class="bi bi-pencil-square"></i> 개별 연락처 수동 편집</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editIndex">
+        <div class="mb-3">
+            <label class="form-label fw-bold text-secondary small">이름 (편집 대상)</label>
+            <input type="text" id="editName" class="form-control shadow-sm">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold text-secondary small">연락처</label>
+            <input type="text" id="editPhone" class="form-control shadow-sm">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold text-secondary small">메모 (사번 / 생년월일 등)</label>
+            <input type="text" id="editMemo" class="form-control shadow-sm">
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-primary fw-bold" onclick="saveManualEdit()"><i class="bi bi-save"></i> 변경사항 적용</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="patternSaveModal" tabindex="-1">
@@ -317,9 +354,7 @@
                     globalData = msg.data.data;
                     undoStack = []; redoStack = []; patternHistory = [];
                     updateHistoryButtons();
-                    
                     realignStaffPosition(globalData); 
-
                     applyViewFilter(); 
                     document.getElementById('setupPanel').classList.remove('show');
                     document.getElementById('workspaceArea').style.display = 'block';
@@ -351,11 +386,20 @@
         renderTable();
     }
 
+    // 카운터 업데이트 함수
+    function updateCountUI() {
+        if (!filteredData) return;
+        const total = filteredData.length;
+        const selected = filteredData.filter(d => d.selected).length;
+        document.getElementById('ui_total_count').innerHTML = `총 ${total}명 <span class="text-warning fw-bold">(선택: ${selected}명)</span>`;
+    }
+
     function renderTable() {
         const tbody = document.getElementById('contactTableBody');
         if(filteredData.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-5">검색 결과가 없습니다.</td></tr>`;
-            document.getElementById('ui_total_count').innerText = "총 0명"; return;
+            updateCountUI();
+            return;
         }
 
         let htmlChunks = [];
@@ -365,11 +409,11 @@
             let badgeHtml = len >= 21 ? `<span class="badge ms-1" style="background-color: #dc3545; color: white;">(${len}자)</span>` : 
                             len >= 17 ? `<span class="badge ms-1" style="background-color: #ffc107; color: black;">(${len}자)</span>` : "";
             
-            // 중복 통합 뱃지 추가
             let mergedBadge = d.isMerged ? `<span class="badge bg-info text-dark ms-1">통합됨</span>` : "";
 
+            // 더블클릭 이벤트(ondblclick) 연결
             htmlChunks.push(`
-                <tr onclick="handleRowClick(event, ${i})">
+                <tr onclick="handleRowClick(event, ${i})" ondblclick="openManualEditModal(${i})" title="더블클릭하여 수정">
                     <td><input class="form-check-input row-chk" type="checkbox" data-idx="${i}" ${d.selected?'checked':''} onclick="event.stopPropagation(); toggleSingleCheck(${i}, event)"></td>
                     <td>${i + 1}</td>
                     <td class="text-start fw-bold text-truncate" title="${d.tempName}">${d.tempName} ${badgeHtml} ${mergedBadge}</td>
@@ -380,8 +424,9 @@
             `);
         }
         tbody.innerHTML = htmlChunks.join('');
-        document.getElementById('ui_total_count').innerText = `총 ${filteredData.length}명`;
+        
         document.getElementById('chkAll').checked = filteredData.length > 0 && filteredData.every(d => d.selected);
+        updateCountUI();
     }
 
     function toggleSingleCheck(index, event) {
@@ -390,32 +435,71 @@
             const start = Math.min(lastCheckedIndex, index), end = Math.max(lastCheckedIndex, index);
             for (let i = start; i <= end; i++) filteredData[i].selected = filteredData[index].selected;
             renderTable(); 
+        } else {
+            updateCountUI();
+            document.getElementById('chkAll').checked = filteredData.every(d => d.selected);
         }
         lastCheckedIndex = index;
-        document.getElementById('chkAll').checked = filteredData.every(d => d.selected);
     }
+    
     function handleRowClick(event, index) { if (event.target.type !== 'checkbox') { const c = document.querySelector(`.row-chk[data-idx="${index}"]`); if(c) c.click(); } }
-    function toggleAllCheckboxes() { const isC = document.getElementById('chkAll').checked; filteredData.forEach(d => d.selected = isC); Array.from(document.querySelectorAll('.row-chk')).forEach(b => b.checked = isC); }
+    
+    function toggleAllCheckboxes() { 
+        const isC = document.getElementById('chkAll').checked; 
+        filteredData.forEach(d => d.selected = isC); 
+        Array.from(document.querySelectorAll('.row-chk')).forEach(b => b.checked = isC); 
+        updateCountUI();
+    }
 
+    // --- 수동 개별 편집 (Double Click) ---
+    function openManualEditModal(index) {
+        const d = filteredData[index];
+        document.getElementById('editIndex').value = index;
+        document.getElementById('editName').value = d.tempName;
+        document.getElementById('editPhone').value = d.phone;
+        document.getElementById('editMemo').value = d.id;
+        new bootstrap.Modal(document.getElementById('manualEditModal')).show();
+    }
+
+    function saveManualEdit() {
+        const idx = document.getElementById('editIndex').value;
+        const newName = document.getElementById('editName').value.trim();
+        const newPhone = document.getElementById('editPhone').value.trim();
+        const newMemo = document.getElementById('editMemo').value.trim();
+
+        if(!newName || !newPhone) return alert("이름과 연락처는 비워둘 수 없습니다.");
+
+        saveState(); // 실행 취소(Undo)를 위해 백업 저장
+
+        filteredData[idx].tempName = newName.replace(/\s+/g, ' ');
+        filteredData[idx].phone = newPhone;
+        filteredData[idx].id = newMemo.replace(/\s+/g, ' ');
+
+        renderTable();
+        showToastMessage("개별 수동 편집이 적용되었습니다", "primary");
+        bootstrap.Modal.getInstance(document.getElementById('manualEditModal')).hide();
+    }
+
+    // --- Undo/Redo 엔진 ---
     function saveState() {
         if(globalData.length === 0) return;
-        undoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id, isMerged: d.isMerged })));
+        undoStack.push(globalData.map(d => ({ tempName: d.tempName, phone: d.phone, id: d.id, isMerged: d.isMerged })));
         if(undoStack.length > MAX_HISTORY) undoStack.shift();
         redoStack = []; 
         updateHistoryButtons();
     }
     function undoAction() {
         if(undoStack.length === 0) return;
-        redoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id, isMerged: d.isMerged })));
+        redoStack.push(globalData.map(d => ({ tempName: d.tempName, phone: d.phone, id: d.id, isMerged: d.isMerged })));
         const prevState = undoStack.pop();
-        globalData.forEach((d, i) => { d.tempName = prevState[i].tempName; d.id = prevState[i].id; });
+        globalData.forEach((d, i) => { d.tempName = prevState[i].tempName; d.phone = prevState[i].phone; d.id = prevState[i].id; });
         applyViewFilter(); updateHistoryButtons(); showToastMessage("실행 취소됨", "primary");
     }
     function redoAction() {
         if(redoStack.length === 0) return;
-        undoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id, isMerged: d.isMerged })));
+        undoStack.push(globalData.map(d => ({ tempName: d.tempName, phone: d.phone, id: d.id, isMerged: d.isMerged })));
         const nextState = redoStack.pop();
-        globalData.forEach((d, i) => { d.tempName = nextState[i].tempName; d.id = nextState[i].id; });
+        globalData.forEach((d, i) => { d.tempName = nextState[i].tempName; d.phone = nextState[i].phone; d.id = nextState[i].id; });
         applyViewFilter(); updateHistoryButtons(); showToastMessage("다시 실행됨", "success");
     }
     function updateHistoryButtons() {
@@ -427,7 +511,6 @@
         const pos = document.getElementById('staffPositionSelect').value;
         list.forEach(d => {
             if(d.role && d.role !== '판매인(GA)') {
-                // 통합된 직급이 여러개일 경우 쪼개서 각각 처리
                 const roleArray = d.role.split(',').map(r => r.trim());
                 let cleanName = d.tempName;
                 let cleanMemo = d.id;
@@ -452,11 +535,7 @@
         });
     }
 
-    function changeStaffPosition() { 
-        saveState(); 
-        realignStaffPosition(); 
-        applyViewFilter(); 
-    }
+    function changeStaffPosition() { saveState(); realignStaffPosition(); applyViewFilter(); }
 
     function showToastMessage(msg, color="success") {
         const toast = document.getElementById('toastStatus');
@@ -612,7 +691,6 @@
         items.forEach(li => {
             const chk = li.querySelector('.load-chk');
             if(!chk.checked) return;
-            
             const idx = li.getAttribute('data-idx');
             const p = tempLoadPatterns[idx];
             if(p.type === 'replace') {
@@ -654,16 +732,12 @@
         saveAs(blob, `편집패턴_수정본_${Date.now()}.json`);
     }
 
-    // --- Phase 3: 최종 내보내기 (Export) 로직 ---
-
     function exportExcelBackup() {
         const targetList = filteredData.filter(d => d.selected);
         if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
 
         const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분"]];
-        targetList.forEach(d => {
-            wsData.push([d.tempName, d.phone, d.id, d.role]);
-        });
+        targetList.forEach(d => wsData.push([d.tempName, d.phone, d.id, d.role]) );
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         const wb = XLSX.utils.book_new();
@@ -676,10 +750,7 @@
         if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
 
         let wsData = [["", "이름"]]; 
-        targetList.forEach((d, i) => {
-            wsData[i + 1] = ["", d.tempName]; 
-        });
-
+        targetList.forEach((d, i) => wsData[i + 1] = ["", d.tempName] );
         while(wsData.length < 5) wsData.push([]);
         wsData[4][3] = targetList.length;
 
@@ -695,7 +766,6 @@
 
         let vcardStr = "";
         targetList.forEach(d => {
-            // BOM 제거 및 N 속성 필수 추가 (vCard 3.0 호환성 100% 보장)
             vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nN:;${d.tempName};;;\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`;
         });
 

@@ -1,4 +1,4 @@
-// worker.js (v1.4.1 - 연락처 기반 중복 통합 엔진 탑재)
+// worker.js (v1.5.0 - 스마트 병합 엔진)
 importScripts('https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js');
 
 self.onmessage = function(e) {
@@ -23,7 +23,7 @@ self.onmessage = function(e) {
                 const id = String(row[2]).trim();
                 const role = String(row[3] || "").trim();
                 
-                const key = phone.replace(/\D/g, "") || (tempName + i); // 번호가 없으면 이름으로 대체
+                const key = phone.replace(/\D/g, "") || (tempName + i); 
                 if (!resultMap.has(key)) {
                     resultMap.set(key, { tempName, phone, id, role, selected: true, isMerged: false }); 
                 }
@@ -51,7 +51,6 @@ self.onmessage = function(e) {
                     const branchName = String(row[12]).trim();
                     const empNo = String(row[13]).trim();
 
-                    // 연락처에서 숫자만 추출하여 완벽한 고유 Key로 사용
                     const phoneKey = phone.replace(/\D/g, "");
                     if(!phoneKey) continue; 
 
@@ -73,24 +72,35 @@ self.onmessage = function(e) {
                     tempName = tempName.replace(/\s+/g, ' ').trim();
 
                     if (!resultMap.has(phoneKey)) {
-                        // 최초 등록
                         resultMap.set(phoneKey, { tempName, phone, id: agentId, role, selected: true, isMerged: false });
                     } else {
-                        // ★ 중복 연락처 발견 -> 데이터 병합(Merge)
+                        // ★ 스마트 병합(Merge) 엔진
                         let existing = resultMap.get(phoneKey);
                         
-                        // 권한구분(직급) 병합
                         if (role && !existing.role.includes(role)) {
-                            if (existing.role === '판매인(GA)') existing.role = role; // 스태프가 우선
+                            if (existing.role === '판매인(GA)') existing.role = role;
                             else existing.role += `, ${role}`;
                         }
                         
-                        // 사번(메모) 병합
-                        if (agentId && !existing.id.includes(agentId)) {
-                            existing.id += ` / ${agentId}`;
+                        if (agentId) {
+                            const parseId = (str) => {
+                                const parts = str.split('/');
+                                return { emp: parts[0] ? parts[0].trim() : "", birth: parts[1] ? parts[1].trim() : "" };
+                            };
+                            let curr = parseId(existing.id);
+                            let next = parseId(agentId);
+                            
+                            // 사번 중복 제거 및 결합
+                            let empSet = new Set(curr.emp ? curr.emp.split(',').map(s=>s.trim()) : []);
+                            if(next.emp) empSet.add(next.emp);
+                            
+                            // 생년월일코드 중복 제거 및 결합
+                            let birthSet = new Set(curr.birth ? curr.birth.split(',').map(s=>s.trim()) : []);
+                            if(next.birth) birthSet.add(next.birth);
+                            
+                            existing.id = Array.from(empSet).join(', ') + " / " + Array.from(birthSet).join(', ');
                         }
-                        
-                        existing.isMerged = true; // 중복 통합 플래그 켜기
+                        existing.isMerged = true; 
                     }
                 }
             }
