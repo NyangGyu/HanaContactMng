@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v0.7.1</title>
+    <title>Hana 연락처 정리 도우미 v0.7.2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -46,7 +46,7 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.1</span></h2>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.2</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
@@ -117,7 +117,7 @@
                     </div>
 
                     <div class="btn-group me-3 shadow-sm">
-                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="document.getElementById('ruleFile').click()"><i class="bi bi-upload"></i> 패턴 로드</button>
+                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSelectModal()"><i class="bi bi-upload"></i> 패턴 로드</button>
                         <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSaveModal()"><i class="bi bi-download"></i> 패턴 저장</button>
                     </div>
                     
@@ -231,7 +231,7 @@
                 <li>스마트폰 <b>[연락처]</b> 어플을 켭니다.</li>
                 <li>화면의 <b>[점 3개]</b>(또는 줄 3개)를 누르고 <b>[설정]</b>(또는 연락처 관리)에 들어갑니다.</li>
                 <li><b>[연락처 내보내기]</b>를 선택하고 <b>[내장 저장공간]</b>을 골라 내보냅니다.</li>
-                <li>스마트폰 <b>[내 파일] > [Download]</b> 폴더에 저장된 파일(.vcf)을 PC로 가져옵니다. (메일 등 활용. 카톡 전송은 VCF 파일 올리면 연락처 1개만 표시되서 전송 안됨)</li>
+                <li>스마트폰 <b>[내 파일] > [Download]</b> 폴더에 저장된 파일(.vcf)을 PC로 가져옵니다.<br><span class="text-muted">(메일 등 활용. 카톡 전송은 VCF 파일 올리면 연락처 1개만 표시되서 전송 안됨)</span></li>
                 <li>아래 <b>[확인 및 파일 첨부]</b> 버튼을 눌러 그 파일을 올려주세요!</li>
             </ol>
         </div>
@@ -296,6 +296,25 @@
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">취소</button>
         <button type="button" class="btn btn-primary fw-bold" onclick="saveManualEdit()"><i class="bi bi-save"></i> 변경사항 적용</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="patternSelectModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold"><i class="bi bi-upload text-success"></i> 패턴 로드 방식 선택</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <button class="btn btn-primary fw-bold w-100 mb-3 py-2 shadow-sm" onclick="loadCommonPatterns()">
+            <i class="bi bi-magic"></i> 줄임말 자동 적용<br><small class="fw-normal">(서버 내장 패턴)</small>
+        </button>
+        <button class="btn btn-outline-dark fw-bold w-100 py-2" onclick="triggerCustomPatternLoad()">
+            <i class="bi bi-folder2-open"></i> 패턴 파일 불러오기<br><small class="fw-normal">(사용자 지정 .json)</small>
+        </button>
       </div>
     </div>
   </div>
@@ -391,14 +410,13 @@
 
         if(!grmId || !targetFile) return alert("GRM 및 엑셀 파일을 세팅해주세요.");
         
-        initProgressBar(); // 진행률 UI 초기화 및 노출
+        initProgressBar();
 
         const reader = new FileReader();
         reader.onload = e => {
             const worker = new Worker('worker.js');
             worker.onmessage = msg => {
                 if(msg.data.status === 'progress') {
-                    // 진행률 퍼센트 계산 및 화면 업데이트
                     const percent = Math.round((msg.data.current / msg.data.total) * 100);
                     document.getElementById('loadingProgressBar').style.width = percent + '%';
                     document.getElementById('loadingProgressBar').innerText = percent + '%';
@@ -431,21 +449,16 @@
     }
 
     // --- VCF 동기화 안내 및 팝업 제어 ---
-    function openVcfGuideModal() {
-        new bootstrap.Modal(document.getElementById('vcfGuideModal')).show();
-    }
-
+    function openVcfGuideModal() { new bootstrap.Modal(document.getElementById('vcfGuideModal')).show(); }
     function triggerVcfUpload() {
         bootstrap.Modal.getInstance(document.getElementById('vcfGuideModal')).hide();
         setTimeout(() => { document.getElementById('vcfPhoneFile').click(); }, 300);
     }
-
     function normalizePhone(phoneStr) {
         let num = phoneStr.replace(/\D/g, ''); 
         if(num.startsWith('82')) num = '0' + num.substring(2); 
         return num;
     }
-
     function handleVcfSync(event) {
         const file = event.target.files[0];
         if(!file) return;
@@ -483,7 +496,6 @@
         };
         reader.readAsText(file);
     }
-
     function applyVcfExclude() {
         globalData.forEach(d => { if(d.isVcfDup) d.selected = false; });
         bootstrap.Modal.getInstance(document.getElementById('vcfSyncModal')).hide();
@@ -494,7 +506,6 @@
 
     // --- UI/UX 필터 및 렌더링 ---
     function clearSearch() { document.getElementById('searchInput').value = ''; applyViewFilter(); }
-
     function applyViewFilter() {
         const isWarningOnly = document.getElementById('viewWarning').checked;
         const isNewOnly = document.getElementById('viewNew').checked;
@@ -579,7 +590,6 @@
         document.getElementById('editMemo').value = d.id;
         new bootstrap.Modal(document.getElementById('manualEditModal')).show();
     }
-
     function saveManualEdit() {
         const idx = document.getElementById('editIndex').value;
         const newName = document.getElementById('editName').value.trim();
@@ -702,7 +712,42 @@
         }
     }
 
-    // --- 패턴 관련 함수 ---
+    // --- (신규) 패턴 로드 선택 및 서버 공통 패턴 다운로드 ---
+    function openPatternSelectModal() {
+        new bootstrap.Modal(document.getElementById('patternSelectModal')).show();
+    }
+
+    async function loadCommonPatterns() {
+        bootstrap.Modal.getInstance(document.getElementById('patternSelectModal')).hide();
+        
+        document.getElementById('loadingSpinner').style.display = 'flex';
+        document.getElementById('loadingProgressText').innerText = "공통 패턴 불러오는 중...";
+
+        try {
+            // 캐시를 방지하여 항상 최신 CommonEditPatterns.json 을 서버에서 긁어옴
+            const response = await fetch('./CommonEditPatterns.json?v=' + Date.now());
+            if (!response.ok) throw new Error("서버에서 파일을 찾을 수 없습니다.");
+            
+            const ptns = await response.json();
+            if (Array.isArray(ptns)) {
+                tempLoadPatterns = ptns;
+                renderLoadPatternModal(); // 기존 팝업 로직 그대로 태움 (눈으로 확인하고 적용)
+            } else {
+                throw new Error("패턴 형식이 올바르지 않습니다.");
+            }
+        } catch(err) {
+            alert("공통 패턴 자동 적용에 실패했습니다.\n" + err.message);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    }
+
+    function triggerCustomPatternLoad() {
+        bootstrap.Modal.getInstance(document.getElementById('patternSelectModal')).hide();
+        setTimeout(() => { document.getElementById('ruleFile').click(); }, 300);
+    }
+
+    // --- 패턴 관련 기존 함수 ---
     function openPatternSaveModal() { const listArea = document.getElementById('patternSaveListArea'); if(patternHistory.length === 0) listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 기록이 없습니다.</div>`; else { let html = `<ul class="list-group list-group-flush">`; patternHistory.forEach((p, idx) => { let text = ""; if(p.type === 'replace') { text = `<span class="badge bg-primary me-2">치환</span> <strong>[${p.find}]</strong> <i class="bi bi-arrow-right mx-1 text-muted"></i> [${p.replace}]`; } else { let tBadge = p.target === 'memo' ? `<span class="badge bg-secondary me-1">메모</span>` : `<span class="badge bg-success me-1">이름</span>`; text = `${tBadge} <span class="badge bg-dark me-2">추가</span> [${p.pos === 'front' ? '맨 앞' : '맨 뒤'}] <strong>${p.text}</strong> ${p.useSpace ? '(띄어쓰기)' : ''}`; } html += `<li class="list-group-item d-flex align-items-center"><input class="form-check-input me-3 pattern-save-chk" type="checkbox" value="${idx}" checked><span>${text}</span></li>`; }); listArea.innerHTML = html + `</ul>`; } new bootstrap.Modal(document.getElementById('patternSaveModal')).show(); }
     function downloadSelectedSavePatterns() { const chks = document.querySelectorAll('.pattern-save-chk:checked'); if(chks.length === 0) return alert("패턴을 1개 이상 선택하세요."); const blob = new Blob([JSON.stringify(Array.from(chks).map(c => patternHistory[parseInt(c.value)]), null, 2)], { type: "application/json" }); saveAs(blob, `편집패턴_${Date.now()}.json`); bootstrap.Modal.getInstance(document.getElementById('patternSaveModal')).hide(); }
     function readPatternFile(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = e => { try { const ptns = JSON.parse(e.target.result); if(Array.isArray(ptns)) { tempLoadPatterns = ptns; renderLoadPatternModal(); } event.target.value = ''; } catch(err) { alert("잘못된 패턴 파일입니다."); } }; reader.readAsText(file); }
