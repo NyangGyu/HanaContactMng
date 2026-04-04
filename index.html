@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.3.0</title>
+    <title>Hana 연락처 정리 도우미 v1.4.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -36,13 +36,13 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.3.0</span></h2>
-            <p class="text-muted mb-0 mt-1">패턴 로드 및 즉석 수정 병합(Merge) 기능, 다중 타겟 호칭 라우팅 엔진 탑재.</p>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.4.0</span></h2>
+            <p class="text-muted mb-0 mt-1">완벽한 데이터 클렌징부터 vCard 및 외부 양식 다중 Export까지 지원하는 최종 버전.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
-            <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 엑셀 출력</button>
-            <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식</button>
-            <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> vCard 형태 저장</button>
+            <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
+            <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식 다운로드</button>
+            <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> 모바일 vCard 저장</button>
         </div>
     </div>
 
@@ -153,8 +153,8 @@
                 <div class="d-flex align-items-center">
                     <span class="fw-bold text-secondary me-2" style="font-size: 0.9rem;">호칭 삽입 위치 :</span>
                     <select id="staffPositionSelect" class="form-select form-select-sm shadow-sm me-3" style="width: 350px;" onchange="changeStaffPosition()">
-                        <option value="front" selected>[이름 앞] 예: [지점스탭] ㅇㅇ생명 홍길동</option>
-                        <option value="back">[이름 뒤] 예: ㅇㅇ생명 홍길동 [지점스탭]</option>
+                        <option value="front">[이름 앞] 예: [지점스탭] ㅇㅇ생명 홍길동</option>
+                        <option value="back" selected>[이름 뒤] 예: ㅇㅇ생명 홍길동 [지점스탭]</option>
                         <option value="memo_front">[메모 앞] 예: [지점스탭] G1234 / 801212-3</option>
                         <option value="memo_back">[메모 뒤] 예: G1234 / 801212-3 [지점스탭]</option>
                         <option value="none">[삽입 안 함] (직급 표기 제거)</option>
@@ -168,11 +168,7 @@
                     <colgroup>
                         <col style="width: 50px;">  
                         <col style="width: 60px;">  
-                        <col>                       
-                        <col style="width: 140px;"> 
-                        <col style="width: 220px;"> 
-                        <col style="width: 110px;"> 
-                    </colgroup>
+                        <col>                       <col style="width: 140px;"> <col style="width: 320px;"> <col style="width: 110px;"> </colgroup>
                     <thead class="table-light">
                         <tr>
                             <th><input class="form-check-input" type="checkbox" id="chkAll" onchange="toggleAllCheckboxes()" checked></th>
@@ -220,8 +216,7 @@
       </div>
       <div class="modal-body">
         <p class="text-muted small mb-3">
-            불러온 패턴을 확인하고 수정할 수 있습니다. 
-            <span class="text-primary fw-bold">적용 시 현재까지의 작업 기록과 병합(Merge)됩니다.</span>
+            불러온 패턴을 확인하고 수정할 수 있습니다. <span class="text-primary fw-bold">적용 시 현재까지의 작업 기록과 병합(Merge)됩니다.</span>
         </p>
         <div id="patternLoadListArea" class="border rounded p-2 bg-white" style="max-height: 400px; overflow-y: auto;"></div>
       </div>
@@ -243,7 +238,7 @@
     let filteredData = [];
     let lastCheckedIndex = -1;
     let patternHistory = []; 
-    let tempLoadPatterns = []; // 로드된 패턴 임시 보관소
+    let tempLoadPatterns = []; 
     let toastTimeout; 
     let searchDebounceTimeout; 
 
@@ -322,6 +317,10 @@
                     globalData = msg.data.data;
                     undoStack = []; redoStack = []; patternHistory = [];
                     updateHistoryButtons();
+                    
+                    // 직급 기본값이 '이름 뒤' 이므로 추출 직후 한 번 정렬해줌
+                    realignStaffPosition(globalData); 
+
                     applyViewFilter(); 
                     document.getElementById('setupPanel').classList.remove('show');
                     document.getElementById('workspaceArea').style.display = 'block';
@@ -422,24 +421,21 @@
         document.getElementById('btnRedo').disabled = (redoStack.length === 0);
     }
 
-    // --- 궁극의 직급 호칭 다이내믹 라우팅 엔진 ---
     function realignStaffPosition(list = globalData) {
         const pos = document.getElementById('staffPositionSelect').value;
         list.forEach(d => {
             if(d.role && d.role !== '판매인(GA)') {
                 const roleTag = `[${d.role}]`;
-                // 1. 이름과 메모 양쪽에서 꼬리표를 깨끗이 폭파시킴
                 let cleanName = d.tempName.split(roleTag).join('').replace(/\s+/g, ' ').trim();
                 let cleanMemo = d.id.split(roleTag).join('').replace(/\s+/g, ' ').trim();
                 
-                // 2. 선택된 위치에 따라 정확한 타겟에만 재삽입
                 if(pos === 'front') d.tempName = `${roleTag} ${cleanName}`;
                 else if(pos === 'back') d.tempName = `${cleanName} ${roleTag}`;
-                else d.tempName = cleanName; // none 또는 메모 타겟일 땐 이름에 안붙임
+                else d.tempName = cleanName; 
 
                 if(pos === 'memo_front') d.id = `${roleTag} ${cleanMemo}`;
                 else if(pos === 'memo_back') d.id = `${cleanMemo} ${roleTag}`;
-                else d.id = cleanMemo; // none 또는 이름 타겟일 땐 메모에 안붙임
+                else d.id = cleanMemo; 
             }
         });
     }
@@ -523,7 +519,6 @@
         }
     }
 
-    // --- (1) 일반 저장 기능 ---
     function openPatternSaveModal() {
         const listArea = document.getElementById('patternSaveListArea');
         if(patternHistory.length === 0) listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 기록이 없습니다.</div>`;
@@ -552,7 +547,6 @@
         bootstrap.Modal.getInstance(document.getElementById('patternSaveModal')).hide();
     }
 
-    // --- (2) 고급 패턴 로드 및 수정, 병합 엔진 ---
     function readPatternFile(event) {
         const file = event.target.files[0];
         if(!file) return;
@@ -600,7 +594,6 @@
         new bootstrap.Modal(document.getElementById('patternLoadModal')).show();
     }
 
-    // 모달 DOM 값을 읽어 최신 패턴 객체 배열로 반환
     function extractModifiedPatternsFromDOM() {
         const items = document.querySelectorAll('#patternLoadListArea li');
         let patterns = [];
@@ -629,14 +622,13 @@
         const patternsToApply = extractModifiedPatternsFromDOM();
         if(patternsToApply.length === 0) return alert("적용할 패턴이 없습니다.");
 
-        saveState(); // 실행 전 Undo 1회 백업
+        saveState(); 
         
-        // 패턴 적용 및 히스토리 병합(Merge)
         patternsToApply.forEach(p => {
             if(p.type === 'replace') applyReplaceRule(p.find, p.replace, true);
             else applyAddRule(p.target, p.pos, p.text, p.useSpace, true);
             
-            patternHistory.push(p); // 병합 핵심
+            patternHistory.push(p); 
         });
         
         renderTable(); 
@@ -651,9 +643,60 @@
         saveAs(blob, `편집패턴_수정본_${Date.now()}.json`);
     }
 
-    function exportExcelBackup() { alert('Phase 3 에서 구현'); }
-    function exportKaTalk() { alert('Phase 3 에서 구현'); }
-    function exportVCard() { alert('Phase 3 에서 구현'); }
+    // --- Phase 3: 최종 내보내기 (Export) 로직 ---
+
+    function exportExcelBackup() {
+        const targetList = filteredData.filter(d => d.selected);
+        if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
+
+        // 1행에 전용 식별 헤더 맵핑 (worker.js에서 인식하는 키워드)
+        const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분"]];
+        targetList.forEach(d => {
+            wsData.push([d.tempName, d.phone, d.id, d.role]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "HanaList");
+        XLSX.writeFile(wb, `Hana연락처백업_${Date.now()}.xlsx`);
+    }
+
+    function exportKaTalk() {
+        const targetList = filteredData.filter(d => d.selected);
+        if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
+
+        // 까톡오토 양식: 첫행 빼고 B2 부터 이름 입력. D5(인덱스 4,3)에 총 개수.
+        let wsData = [["", "이름"]]; // Row 1 (인덱스 0)
+        
+        targetList.forEach((d, i) => {
+            wsData[i + 1] = ["", d.tempName]; // Column A 빈칸, Column B 이름
+        });
+
+        // D5 위치를 위해 배열 크기 확보
+        while(wsData.length < 5) wsData.push([]);
+        
+        // D5 셀에 체크된 대상 총 개수 하드코딩
+        wsData[4][3] = targetList.length;
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "까톡오토");
+        XLSX.writeFile(wb, `까톡오토_대량양식_${Date.now()}.xlsx`);
+    }
+
+    function exportVCard() {
+        const targetList = filteredData.filter(d => d.selected);
+        if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
+
+        let vcardStr = "";
+        targetList.forEach(d => {
+            vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`;
+        });
+
+        // 아이폰/안드로이드 완벽 호환을 위해 UTF-8 BOM(\uFEFF) 탑재
+        const blob = new Blob(["\uFEFF" + vcardStr], { type: "text/vcard;charset=utf-8" });
+        saveAs(blob, `Hana연락처_모바일_${Date.now()}.vcf`);
+    }
 </script>
 </body>
 </html>
