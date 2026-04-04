@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.4.0</title>
+    <title>Hana 연락처 정리 도우미 v1.4.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -36,8 +36,8 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.4.0</span></h2>
-            <p class="text-muted mb-0 mt-1">완벽한 데이터 클렌징부터 vCard 및 외부 양식 다중 Export까지 지원하는 최종 버전.</p>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.4.1</span></h2>
+            <p class="text-muted mb-0 mt-1">vCard 규격 최적화 및 연락처 기반 중복 통합 엔진이 적용된 마스터 버전.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
             <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
@@ -168,7 +168,7 @@
                     <colgroup>
                         <col style="width: 50px;">  
                         <col style="width: 60px;">  
-                        <col>                       <col style="width: 140px;"> <col style="width: 320px;"> <col style="width: 110px;"> </colgroup>
+                        <col>                       <col style="width: 140px;"> <col style="width: 380px;"> <col style="width: 110px;"> </colgroup>
                     <thead class="table-light">
                         <tr>
                             <th><input class="form-check-input" type="checkbox" id="chkAll" onchange="toggleAllCheckboxes()" checked></th>
@@ -318,7 +318,6 @@
                     undoStack = []; redoStack = []; patternHistory = [];
                     updateHistoryButtons();
                     
-                    // 직급 기본값이 '이름 뒤' 이므로 추출 직후 한 번 정렬해줌
                     realignStaffPosition(globalData); 
 
                     applyViewFilter(); 
@@ -365,15 +364,18 @@
             const len = d.tempName.length;
             let badgeHtml = len >= 21 ? `<span class="badge ms-1" style="background-color: #dc3545; color: white;">(${len}자)</span>` : 
                             len >= 17 ? `<span class="badge ms-1" style="background-color: #ffc107; color: black;">(${len}자)</span>` : "";
+            
+            // 중복 통합 뱃지 추가
+            let mergedBadge = d.isMerged ? `<span class="badge bg-info text-dark ms-1">통합됨</span>` : "";
 
             htmlChunks.push(`
                 <tr onclick="handleRowClick(event, ${i})">
                     <td><input class="form-check-input row-chk" type="checkbox" data-idx="${i}" ${d.selected?'checked':''} onclick="event.stopPropagation(); toggleSingleCheck(${i}, event)"></td>
                     <td>${i + 1}</td>
-                    <td class="text-start fw-bold text-truncate" title="${d.tempName}">${d.tempName} ${badgeHtml}</td>
+                    <td class="text-start fw-bold text-truncate" title="${d.tempName}">${d.tempName} ${badgeHtml} ${mergedBadge}</td>
                     <td>${d.phone}</td>
                     <td class="text-truncate text-secondary" title="${d.id}">${d.id}</td>
-                    <td>${d.role}</td>
+                    <td class="text-truncate" title="${d.role}">${d.role}</td>
                 </tr>
             `);
         }
@@ -397,21 +399,21 @@
 
     function saveState() {
         if(globalData.length === 0) return;
-        undoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id })));
+        undoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id, isMerged: d.isMerged })));
         if(undoStack.length > MAX_HISTORY) undoStack.shift();
         redoStack = []; 
         updateHistoryButtons();
     }
     function undoAction() {
         if(undoStack.length === 0) return;
-        redoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id })));
+        redoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id, isMerged: d.isMerged })));
         const prevState = undoStack.pop();
         globalData.forEach((d, i) => { d.tempName = prevState[i].tempName; d.id = prevState[i].id; });
         applyViewFilter(); updateHistoryButtons(); showToastMessage("실행 취소됨", "primary");
     }
     function redoAction() {
         if(redoStack.length === 0) return;
-        undoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id })));
+        undoStack.push(globalData.map(d => ({ tempName: d.tempName, id: d.id, isMerged: d.isMerged })));
         const nextState = redoStack.pop();
         globalData.forEach((d, i) => { d.tempName = nextState[i].tempName; d.id = nextState[i].id; });
         applyViewFilter(); updateHistoryButtons(); showToastMessage("다시 실행됨", "success");
@@ -425,16 +427,26 @@
         const pos = document.getElementById('staffPositionSelect').value;
         list.forEach(d => {
             if(d.role && d.role !== '판매인(GA)') {
-                const roleTag = `[${d.role}]`;
-                let cleanName = d.tempName.split(roleTag).join('').replace(/\s+/g, ' ').trim();
-                let cleanMemo = d.id.split(roleTag).join('').replace(/\s+/g, ' ').trim();
+                // 통합된 직급이 여러개일 경우 쪼개서 각각 처리
+                const roleArray = d.role.split(',').map(r => r.trim());
+                let cleanName = d.tempName;
+                let cleanMemo = d.id;
+                let fullRoleTag = "";
+
+                roleArray.forEach(r => {
+                    const tag = `[${r}]`;
+                    fullRoleTag += tag + " ";
+                    cleanName = cleanName.split(tag).join('').replace(/\s+/g, ' ').trim();
+                    cleanMemo = cleanMemo.split(tag).join('').replace(/\s+/g, ' ').trim();
+                });
+                fullRoleTag = fullRoleTag.trim();
                 
-                if(pos === 'front') d.tempName = `${roleTag} ${cleanName}`;
-                else if(pos === 'back') d.tempName = `${cleanName} ${roleTag}`;
+                if(pos === 'front') d.tempName = `${fullRoleTag} ${cleanName}`;
+                else if(pos === 'back') d.tempName = `${cleanName} ${fullRoleTag}`;
                 else d.tempName = cleanName; 
 
-                if(pos === 'memo_front') d.id = `${roleTag} ${cleanMemo}`;
-                else if(pos === 'memo_back') d.id = `${cleanMemo} ${roleTag}`;
+                if(pos === 'memo_front') d.id = `${fullRoleTag} ${cleanMemo}`;
+                else if(pos === 'memo_back') d.id = `${cleanMemo} ${fullRoleTag}`;
                 else d.id = cleanMemo; 
             }
         });
@@ -627,7 +639,6 @@
         patternsToApply.forEach(p => {
             if(p.type === 'replace') applyReplaceRule(p.find, p.replace, true);
             else applyAddRule(p.target, p.pos, p.text, p.useSpace, true);
-            
             patternHistory.push(p); 
         });
         
@@ -649,7 +660,6 @@
         const targetList = filteredData.filter(d => d.selected);
         if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
 
-        // 1행에 전용 식별 헤더 맵핑 (worker.js에서 인식하는 키워드)
         const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분"]];
         targetList.forEach(d => {
             wsData.push([d.tempName, d.phone, d.id, d.role]);
@@ -665,17 +675,12 @@
         const targetList = filteredData.filter(d => d.selected);
         if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
 
-        // 까톡오토 양식: 첫행 빼고 B2 부터 이름 입력. D5(인덱스 4,3)에 총 개수.
-        let wsData = [["", "이름"]]; // Row 1 (인덱스 0)
-        
+        let wsData = [["", "이름"]]; 
         targetList.forEach((d, i) => {
-            wsData[i + 1] = ["", d.tempName]; // Column A 빈칸, Column B 이름
+            wsData[i + 1] = ["", d.tempName]; 
         });
 
-        // D5 위치를 위해 배열 크기 확보
         while(wsData.length < 5) wsData.push([]);
-        
-        // D5 셀에 체크된 대상 총 개수 하드코딩
         wsData[4][3] = targetList.length;
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -690,11 +695,11 @@
 
         let vcardStr = "";
         targetList.forEach(d => {
-            vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`;
+            // BOM 제거 및 N 속성 필수 추가 (vCard 3.0 호환성 100% 보장)
+            vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nN:;${d.tempName};;;\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`;
         });
 
-        // 아이폰/안드로이드 완벽 호환을 위해 UTF-8 BOM(\uFEFF) 탑재
-        const blob = new Blob(["\uFEFF" + vcardStr], { type: "text/vcard;charset=utf-8" });
+        const blob = new Blob([vcardStr], { type: "text/vcard;charset=utf-8" });
         saveAs(blob, `Hana연락처_모바일_${Date.now()}.vcf`);
     }
 </script>

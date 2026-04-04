@@ -1,4 +1,4 @@
-// worker.js (v1.1.0 - 15만건 파싱 및 위촉일자 필터링)
+// worker.js (v1.4.1 - 연락처 기반 중복 통합 엔진 탑재)
 importScripts('https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js');
 
 self.onmessage = function(e) {
@@ -21,9 +21,11 @@ self.onmessage = function(e) {
                 const tempName = String(row[0]).trim();
                 const phone = String(row[1]).trim();
                 const id = String(row[2]).trim();
-                const key = tempName + "|" + phone;
+                const role = String(row[3] || "").trim();
+                
+                const key = phone.replace(/\D/g, "") || (tempName + i); // 번호가 없으면 이름으로 대체
                 if (!resultMap.has(key)) {
-                    resultMap.set(key, { tempName, phone, id, role: "", selected: true }); 
+                    resultMap.set(key, { tempName, phone, id, role, selected: true, isMerged: false }); 
                 }
             }
         } else {
@@ -49,6 +51,10 @@ self.onmessage = function(e) {
                     const branchName = String(row[12]).trim();
                     const empNo = String(row[13]).trim();
 
+                    // 연락처에서 숫자만 추출하여 완벽한 고유 Key로 사용
+                    const phoneKey = phone.replace(/\D/g, "");
+                    if(!phoneKey) continue; 
+
                     let birth6 = birth;
                     if (birth.length === 8) birth6 = birth.substring(2);
                     else if (birth.length > 6) birth6 = birth.substring(0, 6);
@@ -66,13 +72,25 @@ self.onmessage = function(e) {
                         `${agency} ${head} ${branchName} ${name}`;
                     tempName = tempName.replace(/\s+/g, ' ').trim();
 
-                    if (role && role !== '판매인(GA)') {
-                        tempName = `[${role}] ${tempName}`;
-                    }
-
-                    const key = tempName + "|" + phone;
-                    if (!resultMap.has(key)) {
-                        resultMap.set(key, { tempName, phone, id: agentId, role, selected: true });
+                    if (!resultMap.has(phoneKey)) {
+                        // 최초 등록
+                        resultMap.set(phoneKey, { tempName, phone, id: agentId, role, selected: true, isMerged: false });
+                    } else {
+                        // ★ 중복 연락처 발견 -> 데이터 병합(Merge)
+                        let existing = resultMap.get(phoneKey);
+                        
+                        // 권한구분(직급) 병합
+                        if (role && !existing.role.includes(role)) {
+                            if (existing.role === '판매인(GA)') existing.role = role; // 스태프가 우선
+                            else existing.role += `, ${role}`;
+                        }
+                        
+                        // 사번(메모) 병합
+                        if (agentId && !existing.id.includes(agentId)) {
+                            existing.id += ` / ${agentId}`;
+                        }
+                        
+                        existing.isMerged = true; // 중복 통합 플래그 켜기
                     }
                 }
             }
