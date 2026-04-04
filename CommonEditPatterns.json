@@ -1,0 +1,172 @@
+[
+  {
+    "type": "replace",
+    "find": "에이플러스에셋",
+    "replace": "A+"
+  },
+  {
+    "type": "replace",
+    "find": "글로벌금융판매",
+    "replace": "글로벌"
+  },
+  {
+    "type": "replace",
+    "find": "인카금융서비스",
+    "replace": "인카"
+  },
+  {
+    "type": "replace",
+    "find": "사업단",
+    "replace": ""
+  },
+  {
+    "type": "replace",
+    "find": "프라임에셋본부",
+    "replace": ""
+  },
+  {
+    "type": "replace",
+    "find": "한국보험금융",
+    "replace": "한보금"
+  },
+  {
+    "type": "replace",
+    "find": "씨에스송파",
+    "replace": "CS송파"
+  },
+  {
+    "type": "replace",
+    "find": "에셋",
+    "replace": ""
+  },
+  {
+    "type": "replace",
+    "find": "E센트럴 이센트럴",
+    "replace": "E센트럴"
+  },
+  {
+    "type": "replace",
+    "find": "KS두레 케이에스두레센트럴",
+    "replace": "KS두레센트럴"
+  },
+  {
+    "type": "replace",
+    "find": "KS두레 케이에스두레센트럴",
+    "replace": "KS두레센트럴"
+  },
+  {
+    "type": "replace",
+    "find": "KS두레 케이에스두레",
+    "replace": "KS두레"
+  },
+  {
+    "type": "replace",
+    "find": "미래라이프 미래라이프",
+    "replace": "미래라이프"
+  },
+  {
+    "type": "replace",
+    "find": "엠금융서비스",
+    "replace": "엠금융"
+  },
+  {
+    "type": "replace",
+    "find": "아이에프에이",
+    "replace": "IFA"
+  },
+  {
+    "type": "replace",
+    "find": "위너스서울법인재무센",
+    "replace": "서울법인재무센터"
+  },
+  {
+    "type": "replace",
+    "find": "지에이코리아",
+    "replace": "GAK"
+  },
+  {
+    "type": "replace",
+    "find": "한화생명금융서비스",
+    "replace": "한금서"
+  },
+  {
+    "type": "replace",
+    "find": "마이스터사업부 마이스터",
+    "replace": "마이스터"
+  },
+  {
+    "type": "replace",
+    "find": "아너스사업부 아너스",
+    "replace": "아너스"
+  },
+  {
+    "type": "replace",
+    "find": "에센셜사업부 에센셜",
+    "replace": "에센셜"
+  },
+  {
+    "type": "replace",
+    "find": "HK금융파트너스",
+    "replace": "HK"
+  },
+  {
+    "type": "replace",
+    "find": "더베스트금융서비스",
+    "replace": "더베스트"
+  },
+  {
+    "type": "replace",
+    "find": "KLI 케이엘아이",
+    "replace": "KLI"
+  },
+  {
+    "type": "replace",
+    "find": "마이금융파트너",
+    "replace": "마이금융"
+  },
+  {
+    "type": "replace",
+    "find": "지사",
+    "replace": ""
+  },
+  {
+    "type": "replace",
+    "find": "삼성금융파트너스",
+    "replace": "삼금파"
+  },
+  {
+    "type": "replace",
+    "find": "본부",
+    "replace": ""
+  },
+  {
+    "type": "replace",
+    "find": "신한금융플러스",
+    "replace": "신금플"
+  },
+  {
+    "type": "replace",
+    "find": "아너스금융서비스",
+    "replace": "아너스"
+  },
+  {
+    "type": "replace",
+    "find": "원금융서비스",
+    "replace": "원금융"
+  },
+  {
+    "type": "replace",
+    "find": "지금융코리아",
+    "replace": "지금융"
+  },
+  {
+    "type": "replace",
+    "find": "마이스터더블유엠",
+    "replace": "마이스터WM"
+  },
+  {
+    "type": "replace",
+    "find": "케이지에이",
+    "replace": "KGA"
+  }
+]
