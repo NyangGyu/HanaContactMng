@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.5.0</title>
+    <title>Hana 연락처 정리 도우미 v1.6.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -23,8 +23,6 @@
         .toast-status.show { opacity: 1; }
         .clear-btn { cursor: pointer; color: #6c757d; pointer-events: auto !important; }
         .clear-btn:hover { color: #dc3545; }
-        
-        /* 더블클릭 힌트 애니메이션 CSS */
         .table-hover tbody tr:hover { background-color: #eef2f5; cursor: pointer; }
     </style>
 </head>
@@ -39,8 +37,8 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.5.0</span></h2>
-            <p class="text-muted mb-0 mt-1">개별 수동 편집, 선택 카운터, 스마트 생년월일 중복 제거 엔진 탑재.</p>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.6.0</span></h2>
+            <p class="text-muted mb-0 mt-1">VCF 교차 대조 엔진 탑재 및 모바일 동기화 완벽 지원.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
             <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
@@ -89,24 +87,29 @@
         
         <div class="tool-bar mb-3">
             <div class="row mb-3 align-items-center">
-                <div class="col-lg-5">
+                <div class="col-lg-4">
                     <div class="input-group shadow-sm">
                         <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-search"></i></span>
                         <input type="text" id="searchInput" class="form-control border-primary" placeholder="검색 (예: 에이플 잠실)">
                         <span class="input-group-text bg-white border-primary clear-btn" onclick="clearSearch()"><i class="bi bi-x-lg"></i></span>
                     </div>
                 </div>
-                <div class="col-lg-7 d-flex justify-content-end align-items-center mt-2 mt-lg-0">
+                <div class="col-lg-8 d-flex justify-content-end align-items-center mt-2 mt-lg-0">
                     <input type="file" id="ruleFile" class="d-none" accept=".json" onchange="readPatternFile(event)">
+                    <input type="file" id="vcfPhoneFile" class="d-none" accept=".vcf" onchange="handleVcfSync(event)">
                     
+                    <button class="btn btn-info btn-sm fw-bold text-white shadow-sm me-3" onclick="document.getElementById('vcfPhoneFile').click()">
+                        <i class="bi bi-phone-vibrate"></i> 폰 연락처 중복 검사
+                    </button>
+
                     <div class="btn-group me-3 shadow-sm">
                         <button class="btn btn-light border btn-sm fw-bold text-dark" id="btnUndo" onclick="undoAction()" disabled><i class="bi bi-arrow-counterclockwise text-primary"></i> 취소</button>
                         <button class="btn btn-light border btn-sm fw-bold text-dark" id="btnRedo" onclick="redoAction()" disabled><i class="bi bi-arrow-clockwise text-success"></i> 복구</button>
                     </div>
 
                     <div class="btn-group me-3 shadow-sm">
-                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="document.getElementById('ruleFile').click()"><i class="bi bi-upload"></i> 편집 패턴 로드</button>
-                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSaveModal()"><i class="bi bi-download"></i> 편집 패턴 저장</button>
+                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="document.getElementById('ruleFile').click()"><i class="bi bi-upload"></i> 패턴 로드</button>
+                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSaveModal()"><i class="bi bi-download"></i> 패턴 저장</button>
                     </div>
                     <div class="btn-group shadow-sm" role="group">
                         <input type="radio" class="btn-check" name="viewFilter" id="viewAll" autocomplete="off" checked>
@@ -195,6 +198,33 @@
     </div>
 </div>
 
+<div class="modal fade" id="vcfSyncModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-primary shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-phone-vibrate"></i> 폰 연락처 교차 검증 결과</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <p class="text-secondary mb-3">업로드하신 VCF에서 총 <strong id="vcfTotalExtracted" class="text-dark">0</strong>명의 연락처를 분석했습니다.</p>
+        <h4 class="mb-4">현재 화면 리스트 중<br>
+            <span class="text-danger fw-bold" id="vcfDupCount" style="font-size: 2.5rem;">0</span>명이<br>
+            이미 폰에 존재하는 중복 연락처입니다.
+        </h4>
+        <div class="alert alert-warning text-start small mb-0">
+            <strong><i class="bi bi-info-circle"></i> 어떻게 처리할까요?</strong><br>
+            1. 폰에 없는 <b>완전 신규 인원</b>만 남기고 싶다면 [중복자 제외]를 누르세요.<br>
+            2. 승진/부서이동 등으로 인해 <b>기존 연락처의 이름만 덮어쓰고 싶다면</b> [이름 덮어쓰기용 vCard 생성]을 누르세요.
+        </div>
+      </div>
+      <div class="modal-footer bg-light d-flex flex-column gap-2">
+        <button type="button" class="btn btn-dark fw-bold w-100" onclick="applyVcfExclude()"><i class="bi bi-person-dash-fill"></i> 신규 연락처만 남기기 (중복자 체크 해제)</button>
+        <button type="button" class="btn btn-warning fw-bold w-100" onclick="downloadVcfUpdateOnly()"><i class="bi bi-arrow-repeat"></i> 중복자 이름 덮어쓰기용 vCard 생성</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="manualEditModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
@@ -227,44 +257,12 @@
 
 <div class="modal fade" id="patternSaveModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header bg-light">
-        <h5 class="modal-title fw-bold"><i class="bi bi-save-fill text-primary"></i> 편집 패턴 저장</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small mb-3">저장할 패턴(히스토리)을 선택하세요.</p>
-        <div id="patternSaveListArea" class="border rounded p-2" style="max-height: 300px; overflow-y: auto;"></div>
-      </div>
-      <div class="modal-footer bg-light">
-        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">취소</button>
-        <button type="button" class="btn btn-primary fw-bold" onclick="downloadSelectedSavePatterns()">선택 패턴 다운로드</button>
-      </div>
-    </div>
+    <div class="modal-content border-0 shadow"><div class="modal-header bg-light"><h5 class="modal-title fw-bold"><i class="bi bi-save-fill text-primary"></i> 편집 패턴 저장</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="patternSaveListArea" class="border rounded p-2" style="max-height: 300px; overflow-y: auto;"></div></div><div class="modal-footer bg-light"><button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">취소</button><button type="button" class="btn btn-primary fw-bold" onclick="downloadSelectedSavePatterns()">선택 패턴 다운로드</button></div></div>
   </div>
 </div>
-
 <div class="modal fade" id="patternLoadModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header bg-light">
-        <h5 class="modal-title fw-bold"><i class="bi bi-upload text-success"></i> 편집 패턴 불러오기 및 수정</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small mb-3">
-            불러온 패턴을 확인하고 수정할 수 있습니다. <span class="text-primary fw-bold">적용 시 현재까지의 작업 기록과 병합(Merge)됩니다.</span>
-        </p>
-        <div id="patternLoadListArea" class="border rounded p-2 bg-white" style="max-height: 400px; overflow-y: auto;"></div>
-      </div>
-      <div class="modal-footer bg-light d-flex justify-content-between">
-        <button type="button" class="btn btn-outline-dark fw-bold" onclick="downloadModifiedPatterns()"><i class="bi bi-download"></i> 체크된 패턴 다시 저장</button>
-        <div>
-            <button type="button" class="btn btn-secondary fw-bold me-2" data-bs-dismiss="modal">취소</button>
-            <button type="button" class="btn btn-primary fw-bold" onclick="applyLoadedPatterns()">선택 패턴 적용</button>
-        </div>
-      </div>
-    </div>
+    <div class="modal-content border-0 shadow"><div class="modal-header bg-light"><h5 class="modal-title fw-bold"><i class="bi bi-upload text-success"></i> 편집 패턴 수정 및 적용</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="patternLoadListArea" class="border rounded p-2 bg-white" style="max-height: 400px; overflow-y: auto;"></div></div><div class="modal-footer bg-light d-flex justify-content-between"><button type="button" class="btn btn-outline-dark fw-bold" onclick="downloadModifiedPatterns()"><i class="bi bi-download"></i> 체크된 패턴 다시 저장</button><div><button type="button" class="btn btn-secondary fw-bold me-2" data-bs-dismiss="modal">취소</button><button type="button" class="btn btn-primary fw-bold" onclick="applyLoadedPatterns()">선택 패턴 적용</button></div></div></div>
   </div>
 </div>
 
@@ -368,6 +366,79 @@
         reader.readAsArrayBuffer(targetFile);
     }
 
+    // --- 강력한 VCF 동기화 및 대조 엔진 ---
+    function normalizePhone(phoneStr) {
+        let num = phoneStr.replace(/\D/g, ''); // 숫자만 남김
+        if(num.startsWith('82')) num = '0' + num.substring(2); // +82를 0으로 치환
+        return num;
+    }
+
+    function handleVcfSync(event) {
+        const file = event.target.files[0];
+        if(!file) return;
+        
+        document.getElementById('loadingSpinner').style.display = 'flex';
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            const text = e.target.result;
+            const lines = text.split('\n');
+            let phoneSet = new Set();
+
+            lines.forEach(line => {
+                // vCard에서 전화번호 추출 (정규식: TEL 뒤에 오는 모든 문자열 캡처)
+                const match = line.match(/TEL[^:]*:(.*)/i);
+                if(match && match[1]) {
+                    const normNum = normalizePhone(match[1]);
+                    if(normNum.length >= 9) phoneSet.add(normNum); // 최소 9자리 이상 유효번호
+                }
+            });
+
+            // 화면 데이터와 교차 대조
+            let dupCount = 0;
+            filteredData.forEach(d => {
+                const myNum = normalizePhone(d.phone);
+                d.isVcfDup = phoneSet.has(myNum); // 임시 플래그 저장
+                if(d.isVcfDup) dupCount++;
+            });
+
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('vcfTotalExtracted').innerText = phoneSet.size.toLocaleString();
+            document.getElementById('vcfDupCount').innerText = dupCount.toLocaleString();
+            
+            new bootstrap.Modal(document.getElementById('vcfSyncModal')).show();
+            event.target.value = ''; // 초기화
+        };
+        reader.readAsText(file);
+    }
+
+    function applyVcfExclude() {
+        // 중복된 사람 체크 해제 (신규만 남기기)
+        filteredData.forEach(d => {
+            if(d.isVcfDup) d.selected = false;
+        });
+        renderTable();
+        bootstrap.Modal.getInstance(document.getElementById('vcfSyncModal')).hide();
+        showToastMessage("폰 연락처 중복 대상이 체크 해제되었습니다.", "primary");
+    }
+
+    function downloadVcfUpdateOnly() {
+        // 중복된 사람만 vCard로 생성 (이름 덮어쓰기용)
+        const targetList = filteredData.filter(d => d.isVcfDup);
+        if(targetList.length === 0) return alert("덮어쓸 중복 대상(VCF 교집합)이 존재하지 않습니다.");
+
+        let vcardStr = "";
+        targetList.forEach(d => {
+            vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nN:;${d.tempName};;;\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`;
+        });
+
+        const blob = new Blob([vcardStr], { type: "text/vcard;charset=utf-8" });
+        saveAs(blob, `Hana_이름덮어쓰기용_${Date.now()}.vcf`);
+        bootstrap.Modal.getInstance(document.getElementById('vcfSyncModal')).hide();
+        showToastMessage("이름 덮어쓰기용 vCard가 저장되었습니다.");
+    }
+
+    // --- UI/UX 기본 함수 ---
     function clearSearch() { document.getElementById('searchInput').value = ''; applyViewFilter(); }
 
     function applyViewFilter() {
@@ -386,7 +457,6 @@
         renderTable();
     }
 
-    // 카운터 업데이트 함수
     function updateCountUI() {
         if (!filteredData) return;
         const total = filteredData.length;
@@ -398,8 +468,7 @@
         const tbody = document.getElementById('contactTableBody');
         if(filteredData.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-5">검색 결과가 없습니다.</td></tr>`;
-            updateCountUI();
-            return;
+            updateCountUI(); return;
         }
 
         let htmlChunks = [];
@@ -408,10 +477,8 @@
             const len = d.tempName.length;
             let badgeHtml = len >= 21 ? `<span class="badge ms-1" style="background-color: #dc3545; color: white;">(${len}자)</span>` : 
                             len >= 17 ? `<span class="badge ms-1" style="background-color: #ffc107; color: black;">(${len}자)</span>` : "";
-            
             let mergedBadge = d.isMerged ? `<span class="badge bg-info text-dark ms-1">통합됨</span>` : "";
 
-            // 더블클릭 이벤트(ondblclick) 연결
             htmlChunks.push(`
                 <tr onclick="handleRowClick(event, ${i})" ondblclick="openManualEditModal(${i})" title="더블클릭하여 수정">
                     <td><input class="form-check-input row-chk" type="checkbox" data-idx="${i}" ${d.selected?'checked':''} onclick="event.stopPropagation(); toggleSingleCheck(${i}, event)"></td>
@@ -424,7 +491,6 @@
             `);
         }
         tbody.innerHTML = htmlChunks.join('');
-        
         document.getElementById('chkAll').checked = filteredData.length > 0 && filteredData.every(d => d.selected);
         updateCountUI();
     }
@@ -443,15 +509,8 @@
     }
     
     function handleRowClick(event, index) { if (event.target.type !== 'checkbox') { const c = document.querySelector(`.row-chk[data-idx="${index}"]`); if(c) c.click(); } }
-    
-    function toggleAllCheckboxes() { 
-        const isC = document.getElementById('chkAll').checked; 
-        filteredData.forEach(d => d.selected = isC); 
-        Array.from(document.querySelectorAll('.row-chk')).forEach(b => b.checked = isC); 
-        updateCountUI();
-    }
+    function toggleAllCheckboxes() { const isC = document.getElementById('chkAll').checked; filteredData.forEach(d => d.selected = isC); Array.from(document.querySelectorAll('.row-chk')).forEach(b => b.checked = isC); updateCountUI(); }
 
-    // --- 수동 개별 편집 (Double Click) ---
     function openManualEditModal(index) {
         const d = filteredData[index];
         document.getElementById('editIndex').value = index;
@@ -466,27 +525,20 @@
         const newName = document.getElementById('editName').value.trim();
         const newPhone = document.getElementById('editPhone').value.trim();
         const newMemo = document.getElementById('editMemo').value.trim();
-
         if(!newName || !newPhone) return alert("이름과 연락처는 비워둘 수 없습니다.");
-
-        saveState(); // 실행 취소(Undo)를 위해 백업 저장
-
+        saveState(); 
         filteredData[idx].tempName = newName.replace(/\s+/g, ' ');
         filteredData[idx].phone = newPhone;
         filteredData[idx].id = newMemo.replace(/\s+/g, ' ');
-
-        renderTable();
-        showToastMessage("개별 수동 편집이 적용되었습니다", "primary");
+        renderTable(); showToastMessage("수동 편집이 적용되었습니다", "primary");
         bootstrap.Modal.getInstance(document.getElementById('manualEditModal')).hide();
     }
 
-    // --- Undo/Redo 엔진 ---
     function saveState() {
         if(globalData.length === 0) return;
         undoStack.push(globalData.map(d => ({ tempName: d.tempName, phone: d.phone, id: d.id, isMerged: d.isMerged })));
         if(undoStack.length > MAX_HISTORY) undoStack.shift();
-        redoStack = []; 
-        updateHistoryButtons();
+        redoStack = []; updateHistoryButtons();
     }
     function undoAction() {
         if(undoStack.length === 0) return;
@@ -502,10 +554,7 @@
         globalData.forEach((d, i) => { d.tempName = nextState[i].tempName; d.phone = nextState[i].phone; d.id = nextState[i].id; });
         applyViewFilter(); updateHistoryButtons(); showToastMessage("다시 실행됨", "success");
     }
-    function updateHistoryButtons() {
-        document.getElementById('btnUndo').disabled = (undoStack.length === 0);
-        document.getElementById('btnRedo').disabled = (redoStack.length === 0);
-    }
+    function updateHistoryButtons() { document.getElementById('btnUndo').disabled = (undoStack.length === 0); document.getElementById('btnRedo').disabled = (redoStack.length === 0); }
 
     function realignStaffPosition(list = globalData) {
         const pos = document.getElementById('staffPositionSelect').value;
@@ -515,7 +564,6 @@
                 let cleanName = d.tempName;
                 let cleanMemo = d.id;
                 let fullRoleTag = "";
-
                 roleArray.forEach(r => {
                     const tag = `[${r}]`;
                     fullRoleTag += tag + " ";
@@ -523,11 +571,9 @@
                     cleanMemo = cleanMemo.split(tag).join('').replace(/\s+/g, ' ').trim();
                 });
                 fullRoleTag = fullRoleTag.trim();
-                
                 if(pos === 'front') d.tempName = `${fullRoleTag} ${cleanName}`;
                 else if(pos === 'back') d.tempName = `${cleanName} ${fullRoleTag}`;
                 else d.tempName = cleanName; 
-
                 if(pos === 'memo_front') d.id = `${fullRoleTag} ${cleanMemo}`;
                 else if(pos === 'memo_back') d.id = `${cleanMemo} ${fullRoleTag}`;
                 else d.id = cleanMemo; 
@@ -550,21 +596,13 @@
         const fStr = findStr !== null ? findStr : document.getElementById('findText').value;
         const rStr = replaceStr !== null ? replaceStr : document.getElementById('replaceText').value;
         if(!fStr) return;
-        
         if(!fromPattern) saveState(); 
-
-        let changedCount = 0;
         const targetList = filteredData.filter(d => d.selected);
         const loopList = targetList.length > 0 ? targetList : filteredData;
-
         loopList.forEach(d => {
-            if(d.tempName.includes(fStr)) {
-                d.tempName = d.tempName.split(fStr).join(rStr).replace(/\s+/g, ' ').trim();
-                changedCount++;
-            }
+            if(d.tempName.includes(fStr)) d.tempName = d.tempName.split(fStr).join(rStr).replace(/\s+/g, ' ').trim();
         });
         realignStaffPosition(loopList); 
-
         if(!fromPattern) {
             patternHistory.push({ type: 'replace', find: fStr, replace: rStr });
             document.getElementById('findText').value = document.getElementById('replaceText').value = '';
@@ -579,14 +617,10 @@
         const aStr = text !== null ? text : document.getElementById('addText').value;
         const doSpace = useSpace !== null ? useSpace : document.getElementById('addSpaceCheck').checked;
         if(!aStr) return;
-
         if(!fromPattern) saveState(); 
-
-        let changedCount = 0;
         const targetList = filteredData.filter(d => d.selected);
         const loopList = targetList.length > 0 ? targetList : filteredData;
         const space = doSpace ? " " : "";
-
         loopList.forEach(d => {
             if(aTarget === 'name') {
                 if (aPos === 'front') d.tempName = aStr + space + d.tempName;
@@ -597,11 +631,8 @@
                 else d.id = d.id + space + aStr;
                 d.id = d.id.replace(/\s+/g, ' ').trim();
             }
-            changedCount++;
         });
-
         if(aTarget === 'name') realignStaffPosition(loopList); 
-
         if(!fromPattern) {
             patternHistory.push({ type: 'add', target: aTarget, pos: aPos, text: aStr, useSpace: doSpace });
             document.getElementById('addText').value = '';
@@ -610,135 +641,12 @@
         }
     }
 
-    function openPatternSaveModal() {
-        const listArea = document.getElementById('patternSaveListArea');
-        if(patternHistory.length === 0) listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 기록이 없습니다.</div>`;
-        else {
-            let html = `<ul class="list-group list-group-flush">`;
-            patternHistory.forEach((p, idx) => {
-                let text = "";
-                if(p.type === 'replace') {
-                    text = `<span class="badge bg-primary me-2">치환</span> <strong>[${p.find}]</strong> <i class="bi bi-arrow-right mx-1 text-muted"></i> [${p.replace}]`;
-                } else {
-                    let tBadge = p.target === 'memo' ? `<span class="badge bg-secondary me-1">메모</span>` : `<span class="badge bg-success me-1">이름</span>`;
-                    text = `${tBadge} <span class="badge bg-dark me-2">추가</span> [${p.pos === 'front' ? '맨 앞' : '맨 뒤'}] <strong>${p.text}</strong> ${p.useSpace ? '(띄어쓰기)' : ''}`;
-                }
-                html += `<li class="list-group-item d-flex align-items-center"><input class="form-check-input me-3 pattern-save-chk" type="checkbox" value="${idx}" checked><span>${text}</span></li>`;
-            });
-            listArea.innerHTML = html + `</ul>`;
-        }
-        new bootstrap.Modal(document.getElementById('patternSaveModal')).show();
-    }
-
-    function downloadSelectedSavePatterns() {
-        const chks = document.querySelectorAll('.pattern-save-chk:checked');
-        if(chks.length === 0) return alert("패턴을 1개 이상 선택하세요.");
-        const blob = new Blob([JSON.stringify(Array.from(chks).map(c => patternHistory[parseInt(c.value)]), null, 2)], { type: "application/json" });
-        saveAs(blob, `편집패턴_${Date.now()}.json`);
-        bootstrap.Modal.getInstance(document.getElementById('patternSaveModal')).hide();
-    }
-
-    function readPatternFile(event) {
-        const file = event.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            try {
-                const ptns = JSON.parse(e.target.result);
-                if(Array.isArray(ptns)) {
-                    tempLoadPatterns = ptns;
-                    renderLoadPatternModal();
-                }
-                event.target.value = ''; 
-            } catch(err) { alert("잘못된 패턴 파일입니다."); }
-        };
-        reader.readAsText(file);
-    }
-
-    function renderLoadPatternModal() {
-        const listArea = document.getElementById('patternLoadListArea');
-        let html = `<ul class="list-group list-group-flush">`;
-        tempLoadPatterns.forEach((p, idx) => {
-            html += `<li class="list-group-item d-flex align-items-center flex-wrap gap-2 py-2" data-idx="${idx}">
-                        <input class="form-check-input load-chk me-2" type="checkbox" checked>`;
-            if(p.type === 'replace') {
-                html += `<span class="badge bg-primary">치환</span>
-                         <input type="text" class="form-control form-control-sm w-auto load-fStr shadow-sm" value="${p.find || ''}" placeholder="찾을문자">
-                         <i class="bi bi-arrow-right text-muted"></i>
-                         <input type="text" class="form-control form-control-sm w-auto load-rStr shadow-sm" value="${p.replace || ''}" placeholder="바꿀문자">`;
-            } else if(p.type === 'add') {
-                html += `<span class="badge bg-dark">추가</span>
-                         <select class="form-select form-select-sm w-auto load-target shadow-sm">
-                             <option value="name" ${p.target !== 'memo'?'selected':''}>이름</option>
-                             <option value="memo" ${p.target === 'memo'?'selected':''}>메모</option>
-                         </select>
-                         <select class="form-select form-select-sm w-auto load-pos shadow-sm">
-                             <option value="front" ${p.pos === 'front'?'selected':''}>맨 앞</option>
-                             <option value="back" ${p.pos !== 'front'?'selected':''}>맨 뒤</option>
-                         </select>
-                         <input type="text" class="form-control form-control-sm w-auto load-aStr shadow-sm" value="${p.text || ''}" placeholder="추가할단어">
-                         <div class="form-check mb-0 ms-2"><input type="checkbox" class="form-check-input load-space" ${p.useSpace?'checked':''}><label class="form-check-label small">띄어쓰기</label></div>`;
-            }
-            html += `</li>`;
-        });
-        listArea.innerHTML = html + `</ul>`;
-        new bootstrap.Modal(document.getElementById('patternLoadModal')).show();
-    }
-
-    function extractModifiedPatternsFromDOM() {
-        const items = document.querySelectorAll('#patternLoadListArea li');
-        let patterns = [];
-        items.forEach(li => {
-            const chk = li.querySelector('.load-chk');
-            if(!chk.checked) return;
-            const idx = li.getAttribute('data-idx');
-            const p = tempLoadPatterns[idx];
-            if(p.type === 'replace') {
-                const fStr = li.querySelector('.load-fStr').value;
-                const rStr = li.querySelector('.load-rStr').value;
-                if(fStr) patterns.push({ type: 'replace', find: fStr, replace: rStr });
-            } else if(p.type === 'add') {
-                const target = li.querySelector('.load-target').value;
-                const pos = li.querySelector('.load-pos').value;
-                const text = li.querySelector('.load-aStr').value;
-                const useSpace = li.querySelector('.load-space').checked;
-                if(text) patterns.push({ type: 'add', target, pos, text, useSpace });
-            }
-        });
-        return patterns;
-    }
-
-    function applyLoadedPatterns() {
-        const patternsToApply = extractModifiedPatternsFromDOM();
-        if(patternsToApply.length === 0) return alert("적용할 패턴이 없습니다.");
-
-        saveState(); 
-        
-        patternsToApply.forEach(p => {
-            if(p.type === 'replace') applyReplaceRule(p.find, p.replace, true);
-            else applyAddRule(p.target, p.pos, p.text, p.useSpace, true);
-            patternHistory.push(p); 
-        });
-        
-        renderTable(); 
-        showToastMessage("로드된 패턴 병합 적용 완료", "primary");
-        bootstrap.Modal.getInstance(document.getElementById('patternLoadModal')).hide();
-    }
-
-    function downloadModifiedPatterns() {
-        const patternsToSave = extractModifiedPatternsFromDOM();
-        if(patternsToSave.length === 0) return alert("저장할 패턴이 없습니다.");
-        const blob = new Blob([JSON.stringify(patternsToSave, null, 2)], { type: "application/json" });
-        saveAs(blob, `편집패턴_수정본_${Date.now()}.json`);
-    }
-
+    // --- 파일 추출 ---
     function exportExcelBackup() {
         const targetList = filteredData.filter(d => d.selected);
-        if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
-
+        if(targetList.length === 0) return alert("출력할 대상이 없습니다.");
         const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분"]];
         targetList.forEach(d => wsData.push([d.tempName, d.phone, d.id, d.role]) );
-
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "HanaList");
@@ -747,13 +655,11 @@
 
     function exportKaTalk() {
         const targetList = filteredData.filter(d => d.selected);
-        if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
-
+        if(targetList.length === 0) return alert("출력할 대상이 없습니다.");
         let wsData = [["", "이름"]]; 
         targetList.forEach((d, i) => wsData[i + 1] = ["", d.tempName] );
         while(wsData.length < 5) wsData.push([]);
         wsData[4][3] = targetList.length;
-
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "까톡오토");
@@ -762,16 +668,24 @@
 
     function exportVCard() {
         const targetList = filteredData.filter(d => d.selected);
-        if(targetList.length === 0) return alert("출력할 대상(체크된 항목)이 없습니다.");
-
+        if(targetList.length === 0) return alert("출력할 대상이 없습니다.");
         let vcardStr = "";
         targetList.forEach(d => {
             vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nN:;${d.tempName};;;\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`;
         });
-
         const blob = new Blob([vcardStr], { type: "text/vcard;charset=utf-8" });
         saveAs(blob, `Hana연락처_모바일_${Date.now()}.vcf`);
     }
+
+    // 패턴 관련 함수 생략 (위의 HTML 모달과 연결된 동일 로직이 이미 내장됨)
+    // - openPatternSaveModal, downloadSelectedSavePatterns, readPatternFile, renderLoadPatternModal, extractModifiedPatternsFromDOM, applyLoadedPatterns, downloadModifiedPatterns
+    function openPatternSaveModal() { const listArea = document.getElementById('patternSaveListArea'); if(patternHistory.length === 0) listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 기록이 없습니다.</div>`; else { let html = `<ul class="list-group list-group-flush">`; patternHistory.forEach((p, idx) => { let text = ""; if(p.type === 'replace') { text = `<span class="badge bg-primary me-2">치환</span> <strong>[${p.find}]</strong> <i class="bi bi-arrow-right mx-1 text-muted"></i> [${p.replace}]`; } else { let tBadge = p.target === 'memo' ? `<span class="badge bg-secondary me-1">메모</span>` : `<span class="badge bg-success me-1">이름</span>`; text = `${tBadge} <span class="badge bg-dark me-2">추가</span> [${p.pos === 'front' ? '맨 앞' : '맨 뒤'}] <strong>${p.text}</strong> ${p.useSpace ? '(띄어쓰기)' : ''}`; } html += `<li class="list-group-item d-flex align-items-center"><input class="form-check-input me-3 pattern-save-chk" type="checkbox" value="${idx}" checked><span>${text}</span></li>`; }); listArea.innerHTML = html + `</ul>`; } new bootstrap.Modal(document.getElementById('patternSaveModal')).show(); }
+    function downloadSelectedSavePatterns() { const chks = document.querySelectorAll('.pattern-save-chk:checked'); if(chks.length === 0) return alert("패턴을 1개 이상 선택하세요."); const blob = new Blob([JSON.stringify(Array.from(chks).map(c => patternHistory[parseInt(c.value)]), null, 2)], { type: "application/json" }); saveAs(blob, `편집패턴_${Date.now()}.json`); bootstrap.Modal.getInstance(document.getElementById('patternSaveModal')).hide(); }
+    function readPatternFile(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = e => { try { const ptns = JSON.parse(e.target.result); if(Array.isArray(ptns)) { tempLoadPatterns = ptns; renderLoadPatternModal(); } event.target.value = ''; } catch(err) { alert("잘못된 패턴 파일입니다."); } }; reader.readAsText(file); }
+    function renderLoadPatternModal() { const listArea = document.getElementById('patternLoadListArea'); let html = `<ul class="list-group list-group-flush">`; tempLoadPatterns.forEach((p, idx) => { html += `<li class="list-group-item d-flex align-items-center flex-wrap gap-2 py-2" data-idx="${idx}"><input class="form-check-input load-chk me-2" type="checkbox" checked>`; if(p.type === 'replace') { html += `<span class="badge bg-primary">치환</span><input type="text" class="form-control form-control-sm w-auto load-fStr shadow-sm" value="${p.find || ''}" placeholder="찾을문자"><i class="bi bi-arrow-right text-muted"></i><input type="text" class="form-control form-control-sm w-auto load-rStr shadow-sm" value="${p.replace || ''}" placeholder="바꿀문자">`; } else if(p.type === 'add') { html += `<span class="badge bg-dark">추가</span><select class="form-select form-select-sm w-auto load-target shadow-sm"><option value="name" ${p.target !== 'memo'?'selected':''}>이름</option><option value="memo" ${p.target === 'memo'?'selected':''}>메모</option></select><select class="form-select form-select-sm w-auto load-pos shadow-sm"><option value="front" ${p.pos === 'front'?'selected':''}>맨 앞</option><option value="back" ${p.pos !== 'front'?'selected':''}>맨 뒤</option></select><input type="text" class="form-control form-control-sm w-auto load-aStr shadow-sm" value="${p.text || ''}" placeholder="추가할단어"><div class="form-check mb-0 ms-2"><input type="checkbox" class="form-check-input load-space" ${p.useSpace?'checked':''}><label class="form-check-label small">띄어쓰기</label></div>`; } html += `</li>`; }); listArea.innerHTML = html + `</ul>`; new bootstrap.Modal(document.getElementById('patternLoadModal')).show(); }
+    function extractModifiedPatternsFromDOM() { const items = document.querySelectorAll('#patternLoadListArea li'); let patterns = []; items.forEach(li => { const chk = li.querySelector('.load-chk'); if(!chk.checked) return; const idx = li.getAttribute('data-idx'); const p = tempLoadPatterns[idx]; if(p.type === 'replace') { const fStr = li.querySelector('.load-fStr').value; const rStr = li.querySelector('.load-rStr').value; if(fStr) patterns.push({ type: 'replace', find: fStr, replace: rStr }); } else if(p.type === 'add') { const target = li.querySelector('.load-target').value; const pos = li.querySelector('.load-pos').value; const text = li.querySelector('.load-aStr').value; const useSpace = li.querySelector('.load-space').checked; if(text) patterns.push({ type: 'add', target, pos, text, useSpace }); } }); return patterns; }
+    function applyLoadedPatterns() { const patternsToApply = extractModifiedPatternsFromDOM(); if(patternsToApply.length === 0) return alert("적용할 패턴이 없습니다."); saveState(); patternsToApply.forEach(p => { if(p.type === 'replace') applyReplaceRule(p.find, p.replace, true); else applyAddRule(p.target, p.pos, p.text, p.useSpace, true); patternHistory.push(p); }); renderTable(); showToastMessage("로드된 패턴 적용 완료", "primary"); bootstrap.Modal.getInstance(document.getElementById('patternLoadModal')).hide(); }
+    function downloadModifiedPatterns() { const patternsToSave = extractModifiedPatternsFromDOM(); if(patternsToSave.length === 0) return alert("저장할 패턴이 없습니다."); const blob = new Blob([JSON.stringify(patternsToSave, null, 2)], { type: "application/json" }); saveAs(blob, `편집패턴_수정본_${Date.now()}.json`); }
 </script>
 </body>
 </html>
