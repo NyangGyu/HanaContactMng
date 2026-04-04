@@ -38,12 +38,12 @@
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
             <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.0</span></h2>
-            <p class="text-muted mb-0 mt-1">실무 최적화 UI 및 폰 연락처 동기화 기능을 탑재한 베타 빌드.</p>
+            <p class="text-primary fw-bold mb-0 mt-1"><i class="bi bi-balloon-heart-fill"></i> 소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
             <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
-            <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식 다운로드</button>
             <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> 모바일 vCard 저장</button>
+            <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식으로 출력</button>
         </div>
     </div>
 
@@ -98,7 +98,7 @@
                     <input type="file" id="ruleFile" class="d-none" accept=".json" onchange="readPatternFile(event)">
                     <input type="file" id="vcfPhoneFile" class="d-none" accept=".vcf" onchange="handleVcfSync(event)">
                     
-                    <button class="btn btn-info btn-sm fw-bold text-white shadow-sm me-3" onclick="document.getElementById('vcfPhoneFile').click()">
+                    <button class="btn btn-info btn-sm fw-bold text-white shadow-sm me-3" onclick="openVcfGuideModal()">
                         <i class="bi bi-phone-vibrate"></i> 폰 연락처 중복 검사
                     </button>
 
@@ -204,6 +204,40 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="modal fade" id="vcfGuideModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-info shadow-lg">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-shield-check"></i> 폰 연락처 중복 검사 안내</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body py-4">
+        <h4 class="text-danger fw-bold text-center mb-3">
+            <i class="bi bi-cloud-slash-fill"></i> 절대 안심하세요!
+        </h4>
+        <p class="text-center fw-bold mb-4">업로드하시는 연락처는 어떠한 서버로도 전송되지 않으며,<br>오직 고객님의 PC 안에서만 안전하게 비교됩니다.</p>
+        
+        <div class="alert alert-light border shadow-sm mb-0">
+            <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-question-circle-fill text-info"></i> 내 스마트폰 연락처 파일 준비하는 방법</h6>
+            <ol class="small mb-0 lh-lg" style="padding-left: 1.2rem; color: #495057;">
+                <li>스마트폰 <b>[연락처]</b> 어플을 켭니다.</li>
+                <li>화면의 <b>[점 3개]</b>(또는 줄 3개)를 누르고 <b>[설정]</b>(또는 연락처 관리)에 들어갑니다.</li>
+                <li><b>[연락처 내보내기]</b>를 선택하고 <b>[내장 저장공간]</b>을 골라 내보냅니다.</li>
+                <li>스마트폰 <b>[내 파일] > [Download]</b> 폴더에 저장된 파일(.vcf)을 PC로 가져옵니다. (카톡 내게쓰기, 메일 등 활용)</li>
+                <li>아래 <b>[확인 및 파일 첨부]</b> 버튼을 눌러 그 파일을 올려주세요!</li>
+            </ol>
+        </div>
+      </div>
+      <div class="modal-footer bg-light d-flex gap-2">
+        <button type="button" class="btn btn-secondary fw-bold flex-fill" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-info text-white fw-bold flex-fill" onclick="triggerVcfUpload()">
+            <i class="bi bi-check-lg"></i> 확인 및 파일 첨부
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="vcfSyncModal" tabindex="-1">
@@ -314,7 +348,6 @@
             searchDebounceTimeout = setTimeout(applyViewFilter, 300); 
         });
         
-        // 라디오 버튼 뷰 필터 연결
         document.getElementById('viewAll').addEventListener('change', applyViewFilter);
         document.getElementById('viewNew').addEventListener('change', applyViewFilter);
         document.getElementById('viewDup').addEventListener('change', applyViewFilter);
@@ -356,7 +389,7 @@
                     updateHistoryButtons();
                     realignStaffPosition(globalData); 
                     
-                    document.getElementById('viewAll').checked = true; // 초기엔 전체보기
+                    document.getElementById('viewAll').checked = true;
                     applyViewFilter(); 
                     
                     document.getElementById('setupPanel').classList.remove('show');
@@ -371,7 +404,20 @@
         reader.readAsArrayBuffer(targetFile);
     }
 
-    // --- 강력한 VCF 동기화 및 대조 엔진 ---
+    // --- VCF 동기화 안내 및 팝업 제어 ---
+    function openVcfGuideModal() {
+        new bootstrap.Modal(document.getElementById('vcfGuideModal')).show();
+    }
+
+    function triggerVcfUpload() {
+        // 모달 닫기
+        bootstrap.Modal.getInstance(document.getElementById('vcfGuideModal')).hide();
+        // 팝업 닫히는 애니메이션을 위해 약간의 딜레이 후 파일선택창 띄움
+        setTimeout(() => {
+            document.getElementById('vcfPhoneFile').click();
+        }, 300);
+    }
+
     function normalizePhone(phoneStr) {
         let num = phoneStr.replace(/\D/g, ''); 
         if(num.startsWith('82')) num = '0' + num.substring(2); 
@@ -420,7 +466,6 @@
             if(d.isVcfDup) d.selected = false;
         });
         
-        // 팝업 닫기 및 신규 탭(Auto-Focusing)으로 이동
         bootstrap.Modal.getInstance(document.getElementById('vcfSyncModal')).hide();
         document.getElementById('viewNew').checked = true;
         applyViewFilter();
@@ -441,8 +486,8 @@
 
         filteredData = globalData.filter(d => {
             if (isWarningOnly && d.tempName.length < 17) return false;
-            if (isNewOnly && d.isVcfDup) return false; // VCF 중복자는 제외
-            if (isDupOnly && !d.isVcfDup) return false; // VCF 신규자는 제외
+            if (isNewOnly && d.isVcfDup) return false; 
+            if (isDupOnly && !d.isVcfDup) return false; 
             
             if (keywords.length > 0) {
                 const targetText = d.tempName.toLowerCase();
