@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v0.7.2</title>
+    <title>Hana 연락처 정리 도우미 v0.7.3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -46,7 +46,7 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.2</span></h2>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.3</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
@@ -124,10 +124,16 @@
                     <div class="btn-group shadow-sm" role="group">
                         <input type="radio" class="btn-check" name="viewFilter" id="viewAll" autocomplete="off" checked>
                         <label class="btn btn-outline-primary fw-bold" for="viewAll">전체</label>
+
+                        <input type="radio" class="btn-check" name="viewFilter" id="viewGaOnly" autocomplete="off">
+                        <label class="btn btn-outline-dark fw-bold" for="viewGaOnly">판매인(GA)만</label>
+
                         <input type="radio" class="btn-check" name="viewFilter" id="viewNew" autocomplete="off">
                         <label class="btn btn-outline-success fw-bold" for="viewNew">신규</label>
+
                         <input type="radio" class="btn-check" name="viewFilter" id="viewDup" autocomplete="off">
                         <label class="btn btn-outline-secondary fw-bold" for="viewDup">중복</label>
+
                         <input type="radio" class="btn-check" name="viewFilter" id="viewWarning" autocomplete="off">
                         <label class="btn btn-outline-danger fw-bold" for="viewWarning"><i class="bi bi-exclamation-triangle-fill"></i> 경고</label>
                     </div>
@@ -158,6 +164,11 @@
                     <label class="form-check-label small text-secondary fw-bold" for="addSpaceCheck" style="margin-top: 2px;">띄어쓰기</label>
                 </div>
                 <button class="btn btn-sm btn-dark fw-bold shadow-sm" onclick="applyAddRule()">적용</button>
+
+                <div class="vr mx-3"></div>
+
+                <span class="badge bg-danger fs-6 me-2">삭제</span>
+                <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" onclick="deleteSelectedContacts()"><i class="bi bi-trash3-fill"></i> 체크된 항목 삭제</button>
 
                 <span id="toastStatus" class="toast-status text-success ms-4"><i class="bi bi-check-circle-fill"></i> 완료</span>
             </div>
@@ -374,6 +385,7 @@
         });
         
         document.getElementById('viewAll').addEventListener('change', applyViewFilter);
+        document.getElementById('viewGaOnly').addEventListener('change', applyViewFilter);
         document.getElementById('viewNew').addEventListener('change', applyViewFilter);
         document.getElementById('viewDup').addEventListener('change', applyViewFilter);
         document.getElementById('viewWarning').addEventListener('change', applyViewFilter);
@@ -448,7 +460,7 @@
         reader.readAsArrayBuffer(targetFile);
     }
 
-    // --- VCF 동기화 안내 및 팝업 제어 ---
+    // --- VCF 동기화 및 팝업 제어 ---
     function openVcfGuideModal() { new bootstrap.Modal(document.getElementById('vcfGuideModal')).show(); }
     function triggerVcfUpload() {
         bootstrap.Modal.getInstance(document.getElementById('vcfGuideModal')).hide();
@@ -504,10 +516,23 @@
         showToastMessage("중복 연락처가 제외되고 신규 대상만 필터링 되었습니다.", "primary");
     }
 
+    // --- 데이터 삭제 기능 (신규) ---
+    function deleteSelectedContacts() {
+        const selectedCount = globalData.filter(d => d.selected).length;
+        if(selectedCount === 0) return alert("삭제할 연락처를 체크해주세요.");
+        
+        saveState(); // 스냅샷 백업
+        globalData = globalData.filter(d => !d.selected); // 깊은 복사 구조이므로 참조 문제 없음
+        
+        applyViewFilter();
+        showToastMessage(`${selectedCount}건 삭제 완료 (취소하려면 복구 누르세요)`, "danger");
+    }
+
     // --- UI/UX 필터 및 렌더링 ---
     function clearSearch() { document.getElementById('searchInput').value = ''; applyViewFilter(); }
     function applyViewFilter() {
         const isWarningOnly = document.getElementById('viewWarning').checked;
+        const isGaOnly = document.getElementById('viewGaOnly').checked;
         const isNewOnly = document.getElementById('viewNew').checked;
         const isDupOnly = document.getElementById('viewDup').checked;
         
@@ -516,6 +541,9 @@
 
         filteredData = globalData.filter(d => {
             if (isWarningOnly && d.tempName.length < 17) return false;
+            // GA 전용 필터 (직급 텍스트 안에 '판매인(GA)'가 포함된 경우 모두 허용)
+            if (isGaOnly && (!d.role || !d.role.includes('판매인(GA)'))) return false;
+            
             if (isNewOnly && d.isVcfDup) return false; 
             if (isDupOnly && !d.isVcfDup) return false; 
             
@@ -604,25 +632,24 @@
         bootstrap.Modal.getInstance(document.getElementById('manualEditModal')).hide();
     }
 
-    // --- Undo/Redo 엔진 ---
+    // --- 스냅샷(Deep Copy) 기반 강력한 Undo/Redo 엔진 ---
     function saveState() {
-        if(globalData.length === 0) return;
-        undoStack.push(globalData.map(d => ({ tempName: d.tempName, phone: d.phone, id: d.id, isMerged: d.isMerged })));
+        if(globalData.length === 0 && undoStack.length === 0) return;
+        // 배열 전체를 딥카피(Deep Copy)하여 완벽하게 백업 (삭제 대비용)
+        undoStack.push(JSON.parse(JSON.stringify(globalData)));
         if(undoStack.length > MAX_HISTORY) undoStack.shift();
         redoStack = []; updateHistoryButtons();
     }
     function undoAction() {
         if(undoStack.length === 0) return;
-        redoStack.push(globalData.map(d => ({ tempName: d.tempName, phone: d.phone, id: d.id, isMerged: d.isMerged })));
-        const prevState = undoStack.pop();
-        globalData.forEach((d, i) => { d.tempName = prevState[i].tempName; d.phone = prevState[i].phone; d.id = prevState[i].id; });
+        redoStack.push(JSON.parse(JSON.stringify(globalData)));
+        globalData = undoStack.pop(); // 통째로 엎어치기
         applyViewFilter(); updateHistoryButtons(); showToastMessage("실행 취소됨", "primary");
     }
     function redoAction() {
         if(redoStack.length === 0) return;
-        undoStack.push(globalData.map(d => ({ tempName: d.tempName, phone: d.phone, id: d.id, isMerged: d.isMerged })));
-        const nextState = redoStack.pop();
-        globalData.forEach((d, i) => { d.tempName = nextState[i].tempName; d.phone = nextState[i].phone; d.id = nextState[i].id; });
+        undoStack.push(JSON.parse(JSON.stringify(globalData)));
+        globalData = redoStack.pop(); // 통째로 엎어치기
         applyViewFilter(); updateHistoryButtons(); showToastMessage("다시 실행됨", "success");
     }
     function updateHistoryButtons() { document.getElementById('btnUndo').disabled = (undoStack.length === 0); document.getElementById('btnRedo').disabled = (redoStack.length === 0); }
@@ -712,26 +739,22 @@
         }
     }
 
-    // --- (신규) 패턴 로드 선택 및 서버 공통 패턴 다운로드 ---
-    function openPatternSelectModal() {
-        new bootstrap.Modal(document.getElementById('patternSelectModal')).show();
-    }
+    // --- 패턴 로드 선택 및 서버 공통 패턴 다운로드 ---
+    function openPatternSelectModal() { new bootstrap.Modal(document.getElementById('patternSelectModal')).show(); }
 
     async function loadCommonPatterns() {
         bootstrap.Modal.getInstance(document.getElementById('patternSelectModal')).hide();
-        
         document.getElementById('loadingSpinner').style.display = 'flex';
         document.getElementById('loadingProgressText').innerText = "공통 패턴 불러오는 중...";
 
         try {
-            // 캐시를 방지하여 항상 최신 CommonEditPatterns.json 을 서버에서 긁어옴
             const response = await fetch('./CommonEditPatterns.json?v=' + Date.now());
             if (!response.ok) throw new Error("서버에서 파일을 찾을 수 없습니다.");
             
             const ptns = await response.json();
             if (Array.isArray(ptns)) {
                 tempLoadPatterns = ptns;
-                renderLoadPatternModal(); // 기존 팝업 로직 그대로 태움 (눈으로 확인하고 적용)
+                renderLoadPatternModal(); 
             } else {
                 throw new Error("패턴 형식이 올바르지 않습니다.");
             }
@@ -747,7 +770,6 @@
         setTimeout(() => { document.getElementById('ruleFile').click(); }, 300);
     }
 
-    // --- 패턴 관련 기존 함수 ---
     function openPatternSaveModal() { const listArea = document.getElementById('patternSaveListArea'); if(patternHistory.length === 0) listArea.innerHTML = `<div class="text-center text-muted py-3">저장할 기록이 없습니다.</div>`; else { let html = `<ul class="list-group list-group-flush">`; patternHistory.forEach((p, idx) => { let text = ""; if(p.type === 'replace') { text = `<span class="badge bg-primary me-2">치환</span> <strong>[${p.find}]</strong> <i class="bi bi-arrow-right mx-1 text-muted"></i> [${p.replace}]`; } else { let tBadge = p.target === 'memo' ? `<span class="badge bg-secondary me-1">메모</span>` : `<span class="badge bg-success me-1">이름</span>`; text = `${tBadge} <span class="badge bg-dark me-2">추가</span> [${p.pos === 'front' ? '맨 앞' : '맨 뒤'}] <strong>${p.text}</strong> ${p.useSpace ? '(띄어쓰기)' : ''}`; } html += `<li class="list-group-item d-flex align-items-center"><input class="form-check-input me-3 pattern-save-chk" type="checkbox" value="${idx}" checked><span>${text}</span></li>`; }); listArea.innerHTML = html + `</ul>`; } new bootstrap.Modal(document.getElementById('patternSaveModal')).show(); }
     function downloadSelectedSavePatterns() { const chks = document.querySelectorAll('.pattern-save-chk:checked'); if(chks.length === 0) return alert("패턴을 1개 이상 선택하세요."); const blob = new Blob([JSON.stringify(Array.from(chks).map(c => patternHistory[parseInt(c.value)]), null, 2)], { type: "application/json" }); saveAs(blob, `편집패턴_${Date.now()}.json`); bootstrap.Modal.getInstance(document.getElementById('patternSaveModal')).hide(); }
     function readPatternFile(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = e => { try { const ptns = JSON.parse(e.target.result); if(Array.isArray(ptns)) { tempLoadPatterns = ptns; renderLoadPatternModal(); } event.target.value = ''; } catch(err) { alert("잘못된 패턴 파일입니다."); } }; reader.readAsText(file); }
