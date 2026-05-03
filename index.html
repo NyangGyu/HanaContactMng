@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
     <style>
         body { background-color: #f4f6f9; font-family: 'Malgun Gothic', sans-serif; }
@@ -254,11 +255,19 @@
                 </div>
 
                 <div id="adminResultArea" style="display:none;" class="mt-4 pt-3 border-top">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <h5 class="fw-bold mb-0"><i class="bi bi-clipboard-data-fill"></i> 분석 결과</h5>
-                        <button class="btn btn-success fw-bold shadow-sm" onclick="downloadGrmDataResult()">
-                            <i class="bi bi-file-excel-fill"></i> GRM_Data.xlsx 다운로드
-                        </button>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button id="btnExpandAll" class="btn btn-outline-dark fw-bold shadow-sm" onclick="toggleAllAdminDetails()">
+                                <i class="bi bi-arrows-expand"></i> 모두 펼치기
+                            </button>
+                            <button class="btn btn-info text-white fw-bold shadow-sm" onclick="captureAdminResult()">
+                                <i class="bi bi-camera-fill"></i> 이미지 저장 (PNG)
+                            </button>
+                            <button class="btn btn-success fw-bold shadow-sm" onclick="downloadGrmDataResult()">
+                                <i class="bi bi-file-excel-fill"></i> GRM_Data.xlsx 다운로드
+                            </button>
+                        </div>
                     </div>
                     <div id="adminResultSummary" class="alert alert-light border mb-3 small"></div>
                     <div class="table-responsive border rounded" style="max-height: 500px; overflow-y: auto;">
@@ -1113,6 +1122,8 @@
             &nbsp;|&nbsp; 삭제 <span class="text-danger fw-bold">-${totalRemoved.toLocaleString()}</span>
             &nbsp;|&nbsp; 변경 없음 GRM <strong>${unchanged}</strong>명
             <br><span class="text-muted">행을 클릭하면 상세 내역이 펼쳐집니다.</span>`;
+        const expandBtn = document.getElementById('btnExpandAll');
+        if (expandBtn) expandBtn.innerHTML = '<i class="bi bi-arrows-expand"></i> 모두 펼치기';
         document.getElementById('adminResultArea').style.display = 'block';
     }
 
@@ -1152,6 +1163,83 @@
         XLSX.utils.book_append_sheet(wb, ws1, 'GRM별_지점코드');
         XLSX.utils.book_append_sheet(wb, ws2, sheetName);
         XLSX.writeFile(wb, 'GRM_Data.xlsx');
+    }
+
+    function toggleAllAdminDetails() {
+        const rows = document.querySelectorAll('#adminResultTableBody tr.collapse');
+        if (rows.length === 0) return;
+        const btn = document.getElementById('btnExpandAll');
+        const allOpen = Array.from(rows).every(r => r.classList.contains('show'));
+        if (allOpen) {
+            rows.forEach(r => r.classList.remove('show'));
+            btn.innerHTML = '<i class="bi bi-arrows-expand"></i> 모두 펼치기';
+        } else {
+            rows.forEach(r => r.classList.add('show'));
+            btn.innerHTML = '<i class="bi bi-arrows-collapse"></i> 모두 접기';
+        }
+    }
+
+    async function captureAdminResult() {
+        if (typeof html2canvas === 'undefined') {
+            return alert('이미지 캡쳐 라이브러리(html2canvas) 로드에 실패했습니다. 인터넷 연결을 확인해주세요.');
+        }
+        if (!adminAnalysisResult) return alert('먼저 분석을 실행해주세요.');
+
+        const target = document.getElementById('adminResultArea');
+        const scrollDiv = target.querySelector('.table-responsive');
+        const rows = target.querySelectorAll('tr.collapse');
+
+        // 현재 상태 백업
+        const prevShow = Array.from(rows).map(r => r.classList.contains('show'));
+        const prevMaxHeight = scrollDiv.style.maxHeight;
+        const prevOverflow = scrollDiv.style.overflowY;
+
+        // 캡쳐용 임시 상태: 모두 펼침 + 스크롤 영역 전체 노출
+        rows.forEach(r => r.classList.add('show'));
+        scrollDiv.style.maxHeight = 'none';
+        scrollDiv.style.overflowY = 'visible';
+
+        document.getElementById('loadingText').innerText = '이미지 생성 중입니다...';
+        document.getElementById('loadingProgressText').innerHTML = '<i class="bi bi-camera-fill"></i> 화면을 캡쳐하고 있습니다...';
+        document.getElementById('loadingProgressBar').style.width = '50%';
+        document.getElementById('loadingProgressBar').innerText = '50%';
+        document.getElementById('loadingSpinner').style.display = 'flex';
+
+        try {
+            await new Promise(r => setTimeout(r, 150)); // DOM 렌더 대기
+            const canvas = await html2canvas(target, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                windowWidth: target.scrollWidth,
+                windowHeight: target.scrollHeight
+            });
+
+            const now = new Date();
+            const yy = String(now.getFullYear()).slice(2);
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+
+            await new Promise((resolve, reject) => {
+                canvas.toBlob(blob => {
+                    if (!blob) return reject(new Error('Blob 변환 실패'));
+                    saveAs(blob, `GRM_지점코드_분석결과_${yy}${mm}${dd}.png`);
+                    resolve();
+                }, 'image/png');
+            });
+        } catch (err) {
+            alert('이미지 저장 실패: ' + err.message);
+        } finally {
+            // 상태 원복
+            rows.forEach((r, i) => {
+                if (prevShow[i]) r.classList.add('show');
+                else r.classList.remove('show');
+            });
+            scrollDiv.style.maxHeight = prevMaxHeight;
+            scrollDiv.style.overflowY = prevOverflow;
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('loadingText').innerText = '데이터를 처리 중입니다...';
+        }
     }
 
     document.addEventListener('DOMContentLoaded', initAdminDropzone);
