@@ -49,10 +49,15 @@
             <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.4</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
-        <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
-            <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
-            <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> 모바일 vCard 저장</button>
-            <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식으로 출력</button>
+        <div class="d-flex align-items-end gap-2">
+            <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
+                <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
+                <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> 모바일 vCard 저장</button>
+                <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식으로 출력</button>
+            </div>
+            <button id="btnAdminLogin" class="btn btn-outline-dark btn-sm fw-bold shadow-sm" onclick="openAdminLoginModal()" title="슈퍼관리자 로그인">
+                <i class="bi bi-shield-lock-fill"></i> 관리자
+            </button>
         </div>
     </div>
 
@@ -220,6 +225,63 @@
             </div>
         </div>
     </div>
+
+    <div id="adminPanel" style="display:none;">
+        <div class="card shadow border-warning mb-4">
+            <div class="card-header bg-warning d-flex justify-content-between align-items-center">
+                <span class="fw-bold fs-5 text-dark"><i class="bi bi-shield-lock-fill"></i> 슈퍼관리자 모드 — 지점코드 분석</span>
+                <button class="btn btn-sm btn-dark fw-bold" onclick="exitAdminMode()"><i class="bi bi-x-lg"></i> 관리자 모드 종료</button>
+            </div>
+            <div class="card-body">
+                <div class="row g-4 align-items-stretch">
+                    <div class="col-md-7">
+                        <label class="form-label fw-bold text-secondary">1. GA정보_전체정보 엑셀 첨부</label>
+                        <div id="adminDropZone" class="dropzone" onclick="document.getElementById('adminTargetFile').click()" style="border-color:#ffc107;">
+                            <div class="dropzone-icon" id="adminDropIcon" style="color:#ffc107;"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+                            <h4 class="fw-bold mb-2" id="adminDropTitle" style="color:#ffc107;">파일을 드래그 앤 드롭</h4>
+                            <p class="text-muted small mb-0">예: GA정보_전체정보_YYYYMMDD.xlsx</p>
+                            <input type="file" id="adminTargetFile" class="d-none" accept=".xlsx, .xls">
+                        </div>
+                    </div>
+                    <div class="col-md-5 d-flex flex-column justify-content-center">
+                        <button id="btnAnalyzeBranches" class="btn btn-primary btn-lg fw-bold shadow-sm py-3" onclick="analyzeBranchCodes()" disabled>
+                            <i class="bi bi-magic"></i> 2. 지점 코드 분석
+                        </button>
+                        <p class="text-muted small mt-2 mb-0">
+                            기존 <code>GRM_Data.xlsx</code>의 GRM별 담당 지점코드를 첨부 파일과 비교하여 추가/삭제 내역을 정리합니다.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="adminResultArea" style="display:none;" class="mt-4 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-clipboard-data-fill"></i> 분석 결과</h5>
+                        <button class="btn btn-success fw-bold shadow-sm" onclick="downloadGrmDataResult()">
+                            <i class="bi bi-file-excel-fill"></i> GRM_Data.xlsx 다운로드
+                        </button>
+                    </div>
+                    <div id="adminResultSummary" class="alert alert-light border mb-3 small"></div>
+                    <div class="table-responsive border rounded" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0 align-middle text-center">
+                            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                                <tr>
+                                    <th style="width: 30px;"></th>
+                                    <th>GRM</th>
+                                    <th class="text-start">담당자</th>
+                                    <th class="text-secondary">기존</th>
+                                    <th class="text-secondary">신규</th>
+                                    <th class="text-info">유지</th>
+                                    <th class="text-success">추가</th>
+                                    <th class="text-danger">삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminResultTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="vcfGuideModal" tabindex="-1">
@@ -325,6 +387,26 @@
         <button class="btn btn-outline-dark fw-bold w-100 py-2" onclick="triggerCustomPatternLoad()">
             <i class="bi bi-folder2-open"></i> 패턴 파일 불러오기<br><small class="fw-normal">(사용자 지정 .json)</small>
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="adminLoginModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-dark shadow-lg">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock-fill"></i> 슈퍼관리자 로그인</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body py-4">
+        <label class="form-label fw-bold text-secondary small">관리자 비밀번호</label>
+        <input type="password" id="adminPwInput" class="form-control shadow-sm" placeholder="비밀번호 입력" autocomplete="off">
+        <div id="adminPwHint" class="text-danger small fw-bold mt-2" style="min-height: 1.2rem;"></div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-dark fw-bold" onclick="submitAdminLogin()"><i class="bi bi-unlock-fill"></i> 로그인</button>
       </div>
     </div>
   </div>
@@ -782,6 +864,297 @@
     function exportExcelBackup() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분"]]; targetList.forEach(d => wsData.push([d.tempName, d.phone, d.id, d.role]) ); const ws = XLSX.utils.aoa_to_sheet(wsData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "HanaList"); XLSX.writeFile(wb, `Hana연락처백업_${Date.now()}.xlsx`); }
     function exportKaTalk() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); let wsData = [["", "이름"]]; targetList.forEach((d, i) => wsData[i + 1] = ["", d.tempName] ); while(wsData.length < 5) wsData.push([]); wsData[4][3] = targetList.length; const ws = XLSX.utils.aoa_to_sheet(wsData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "까톡오토"); XLSX.writeFile(wb, `까톡오토_대량양식_${Date.now()}.xlsx`); }
     function exportVCard() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); let vcardStr = ""; targetList.forEach(d => { vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nN:;${d.tempName};;;\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`; }); const blob = new Blob([vcardStr], { type: "text/vcard;charset=utf-8" }); saveAs(blob, `Hana연락처_모바일_${Date.now()}.vcf`); }
+
+    // ===== 슈퍼관리자 모드 =====
+    const ADMIN_PW_HASH = '858b329d1a992594e73a5b7a2bd73a494603fec972024e16e9475fa11e52e4b2';
+    const ADMIN_SESSION_KEY = 'hana_admin_authed';
+    const ADMIN_SESSION_TTL_MS = 60 * 60 * 1000;
+    let adminTargetFile = null;
+    let adminAnalysisResult = null;
+
+    async function sha256Hex(text) {
+        const buf = new TextEncoder().encode(text);
+        const hash = await crypto.subtle.digest('SHA-256', buf);
+        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function isAdminAuthed() {
+        try {
+            const raw = sessionStorage.getItem(ADMIN_SESSION_KEY);
+            if (!raw) return false;
+            const exp = parseInt(raw, 10);
+            if (!exp || Date.now() > exp) { sessionStorage.removeItem(ADMIN_SESSION_KEY); return false; }
+            return true;
+        } catch (e) { return false; }
+    }
+
+    function openAdminLoginModal() {
+        if (isAdminAuthed()) { enterAdminMode(); return; }
+        document.getElementById('adminPwInput').value = '';
+        document.getElementById('adminPwHint').innerText = '';
+        const m = new bootstrap.Modal(document.getElementById('adminLoginModal'));
+        m.show();
+        setTimeout(() => document.getElementById('adminPwInput').focus(), 350);
+    }
+
+    async function submitAdminLogin() {
+        const pw = document.getElementById('adminPwInput').value;
+        const hint = document.getElementById('adminPwHint');
+        if (!pw) { hint.innerText = '비밀번호를 입력하세요.'; return; }
+        const hashed = await sha256Hex(pw);
+        if (hashed === ADMIN_PW_HASH) {
+            sessionStorage.setItem(ADMIN_SESSION_KEY, String(Date.now() + ADMIN_SESSION_TTL_MS));
+            bootstrap.Modal.getInstance(document.getElementById('adminLoginModal')).hide();
+            enterAdminMode();
+        } else {
+            hint.innerText = '비밀번호가 일치하지 않습니다.';
+            document.getElementById('adminPwInput').select();
+        }
+    }
+
+    function enterAdminMode() {
+        document.getElementById('setupPanel').style.display = 'none';
+        document.getElementById('workspaceArea').style.display = 'none';
+        document.getElementById('exportBtnGroup').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        document.getElementById('btnAdminLogin').classList.add('d-none');
+    }
+
+    function exitAdminMode() {
+        document.getElementById('adminPanel').style.display = 'none';
+        document.getElementById('btnAdminLogin').classList.remove('d-none');
+        if (globalData.length > 0) {
+            document.getElementById('workspaceArea').style.display = 'block';
+            document.getElementById('exportBtnGroup').style.display = 'inline-flex';
+        } else {
+            document.getElementById('setupPanel').style.display = 'block';
+        }
+    }
+
+    // 관리자 dropzone (DOMContentLoaded 시점에 한 번만 바인딩)
+    function initAdminDropzone() {
+        const aDropZone = document.getElementById('adminDropZone');
+        const aFileInput = document.getElementById('adminTargetFile');
+        if (!aDropZone || !aFileInput) return;
+        aDropZone.addEventListener('dragover', e => { e.preventDefault(); aDropZone.classList.add('dragover'); });
+        aDropZone.addEventListener('dragleave', () => aDropZone.classList.remove('dragover'));
+        aDropZone.addEventListener('drop', e => {
+            e.preventDefault(); aDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) { aFileInput.files = e.dataTransfer.files; handleAdminFileSelect(); }
+        });
+        aFileInput.addEventListener('change', handleAdminFileSelect);
+
+        document.getElementById('adminPwInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); submitAdminLogin(); }
+        });
+    }
+    function handleAdminFileSelect() {
+        const f = document.getElementById('adminTargetFile').files[0];
+        if (!f) return;
+        adminTargetFile = f;
+        document.getElementById('adminDropIcon').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+        document.getElementById('adminDropTitle').innerText = f.name;
+        document.getElementById('adminDropTitle').style.color = '#198754';
+        document.getElementById('btnAnalyzeBranches').disabled = false;
+    }
+
+    // ===== 분석 로직 =====
+    async function analyzeBranchCodes() {
+        if (!adminTargetFile) return alert('먼저 GA정보 엑셀 파일을 첨부해주세요.');
+
+        document.getElementById('loadingProgressBar').style.width = '0%';
+        document.getElementById('loadingProgressBar').innerText = '0%';
+        document.getElementById('loadingProgressText').innerHTML = '<i class="bi bi-cpu-fill"></i> 분석 준비 중...';
+        document.getElementById('loadingText').innerText = '지점코드 분석 중입니다...';
+        document.getElementById('loadingSpinner').style.display = 'flex';
+
+        try {
+            // 1. 기존 GRM_Data.xlsx 로드
+            const oldResp = await fetch('./GRM_Data.xlsx?v=' + Date.now());
+            if (!oldResp.ok) throw new Error('기존 GRM_Data.xlsx를 불러올 수 없습니다.');
+            const oldWb = XLSX.read(new Uint8Array(await oldResp.arrayBuffer()), { type: 'array' });
+            const oldSheet = oldWb.Sheets['GRM별_지점코드'];
+            if (!oldSheet) throw new Error("'GRM별_지점코드' 시트가 GRM_Data.xlsx에 없습니다.");
+            const oldRows = XLSX.utils.sheet_to_json(oldSheet, { header: 1, defval: null });
+
+            // 2. 첨부 파일 파싱
+            document.getElementById('loadingProgressText').innerHTML = '<i class="bi bi-file-earmark-excel"></i> 첨부 파일 파싱 중...';
+            const buf = await adminTargetFile.arrayBuffer();
+            const newWb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+            const newSheet = newWb.Sheets[newWb.SheetNames[0]];
+            const newRows = XLSX.utils.sheet_to_json(newSheet, { header: 1, defval: null });
+
+            // 3. 인덱스 매핑 (Excel 컬럼 → 0-based 인덱스)
+            //    D=대리점명(3), F=본부명(5), G=지점코드(6), H=지점명(7), AC=지알엠1(28)
+            const COL = { agency: 3, hq: 5, branch: 6, branchName: 7, grm: 28 };
+
+            // 4. 신규 파일 → GRM별 지점 리스트, 전체 지점코드 사전(삭제 항목 정보 보강용)
+            const newGrmMap = new Map();   // grmCode -> [{ branchCode, agency, hq, branchName }]
+            const allBranchInfo = new Map(); // branchCode -> { agency, hq, branchName }
+            for (let r = 1; r < newRows.length; r++) {
+                const row = newRows[r];
+                if (!row) continue;
+                const branchCode = row[COL.branch] != null ? String(row[COL.branch]).trim() : '';
+                if (!branchCode) continue;
+                const grm = row[COL.grm] != null ? String(row[COL.grm]).trim() : '';
+                const info = {
+                    branchCode,
+                    agency: row[COL.agency] != null ? String(row[COL.agency]).trim() : '',
+                    hq: row[COL.hq] != null ? String(row[COL.hq]).trim() : '',
+                    branchName: row[COL.branchName] != null ? String(row[COL.branchName]).trim() : ''
+                };
+                if (!allBranchInfo.has(branchCode)) allBranchInfo.set(branchCode, info);
+                if (grm) {
+                    if (!newGrmMap.has(grm)) newGrmMap.set(grm, []);
+                    newGrmMap.get(grm).push(info);
+                }
+            }
+
+            // 5. GRM별 비교
+            const oldRow1 = oldRows[0] || [];
+            const oldRow2 = oldRows[1] || [];
+            const result = [];
+            for (let c = 0; c < oldRow1.length; c++) {
+                const codeRaw = oldRow1[c] != null ? String(oldRow1[c]).trim() : '';
+                const name = oldRow2[c] != null ? String(oldRow2[c]).trim() : '';
+                if (!codeRaw) continue;
+
+                // 슬래시 구분된 multi-사번은 첫 번째 대표
+                const matchCode = codeRaw.split('/')[0].trim();
+
+                // 기존 지점코드 (R3부터 순서 유지)
+                const oldCodes = [];
+                for (let r = 2; r < oldRows.length; r++) {
+                    const v = oldRows[r] && oldRows[r][c];
+                    if (v != null && String(v).trim() !== '') oldCodes.push(String(v).trim());
+                }
+
+                const newEntries = newGrmMap.get(matchCode) || [];
+                const newCodes = newEntries.map(e => e.branchCode);
+                const newCodeSet = new Set(newCodes);
+                const oldCodeSet = new Set(oldCodes);
+
+                const kept = oldCodes.filter(bc => newCodeSet.has(bc));
+                const removed = oldCodes.filter(bc => !newCodeSet.has(bc));
+                const added = newCodes.filter(bc => !oldCodeSet.has(bc));
+
+                const newDetailMap = new Map(newEntries.map(e => [e.branchCode, e]));
+                const addedDetails = added.map(bc => newDetailMap.get(bc));
+                const removedDetails = removed.map(bc => allBranchInfo.get(bc) || { branchCode: bc, agency: '-', hq: '-', branchName: '-' });
+
+                result.push({
+                    colIndex: c,
+                    codeRaw, matchCode, name,
+                    oldCodes, newCodes, kept, added, removed, addedDetails, removedDetails,
+                    finalCodes: [...kept, ...added]
+                });
+            }
+
+            adminAnalysisResult = result;
+            renderAdminResult(result);
+        } catch (err) {
+            alert('분석 중 오류 발생: ' + err.message);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('loadingText').innerText = '데이터를 처리 중입니다...';
+        }
+    }
+
+    function renderAdminResult(result) {
+        const tbody = document.getElementById('adminResultTableBody');
+        const summary = document.getElementById('adminResultSummary');
+
+        let totalOld = 0, totalNew = 0, totalKept = 0, totalAdded = 0, totalRemoved = 0;
+        let unchanged = 0;
+        const rows = result.map((r, idx) => {
+            totalOld += r.oldCodes.length;
+            totalNew += r.newCodes.length;
+            totalKept += r.kept.length;
+            totalAdded += r.added.length;
+            totalRemoved += r.removed.length;
+            const hasChange = r.added.length > 0 || r.removed.length > 0;
+            if (!hasChange) unchanged++;
+
+            const detailRows = (r.added.length === 0 && r.removed.length === 0)
+                ? `<tr><td colspan="5" class="text-muted small py-2">변경 사항이 없습니다.</td></tr>`
+                : [
+                    ...r.addedDetails.map(d => `<tr class="table-success"><td><span class="badge bg-success">추가</span></td><td>${d.branchCode}</td><td class="text-start">${d.agency || '-'}</td><td class="text-start">${d.hq || '-'}</td><td class="text-start">${d.branchName || '-'}</td></tr>`),
+                    ...r.removedDetails.map(d => `<tr class="table-danger"><td><span class="badge bg-danger">삭제</span></td><td>${d.branchCode}</td><td class="text-start">${d.agency || '-'}</td><td class="text-start">${d.hq || '-'}</td><td class="text-start">${d.branchName || '-'}</td></tr>`)
+                  ].join('');
+
+            return `
+                <tr class="fw-bold ${hasChange ? '' : 'text-muted'}" data-bs-toggle="collapse" data-bs-target="#admDetail${idx}" style="cursor:pointer;">
+                    <td><i class="bi bi-chevron-down"></i></td>
+                    <td><code>${r.codeRaw}</code></td>
+                    <td class="text-start">${r.name}</td>
+                    <td>${r.oldCodes.length}</td>
+                    <td>${r.newCodes.length}</td>
+                    <td class="text-info">${r.kept.length}</td>
+                    <td class="text-success">${r.added.length > 0 ? '+' + r.added.length : 0}</td>
+                    <td class="text-danger">${r.removed.length > 0 ? '-' + r.removed.length : 0}</td>
+                </tr>
+                <tr class="collapse" id="admDetail${idx}">
+                    <td colspan="8" class="p-0">
+                        <table class="table table-sm mb-0 small">
+                            <thead class="table-secondary"><tr><th style="width:80px;">구분</th><th style="width:100px;">지점코드</th><th class="text-start">대리점명</th><th class="text-start">본부명</th><th class="text-start">지점명</th></tr></thead>
+                            <tbody>${detailRows}</tbody>
+                        </table>
+                    </td>
+                </tr>`;
+        }).join('');
+
+        tbody.innerHTML = rows;
+        summary.innerHTML = `
+            <strong>GRM ${result.length}명 분석 완료</strong>
+            &nbsp;|&nbsp; 기존 총 <strong>${totalOld.toLocaleString()}</strong>건
+            &nbsp;|&nbsp; 신규 총 <strong>${totalNew.toLocaleString()}</strong>건
+            &nbsp;|&nbsp; 유지 <span class="text-info fw-bold">${totalKept.toLocaleString()}</span>
+            &nbsp;|&nbsp; 추가 <span class="text-success fw-bold">+${totalAdded.toLocaleString()}</span>
+            &nbsp;|&nbsp; 삭제 <span class="text-danger fw-bold">-${totalRemoved.toLocaleString()}</span>
+            &nbsp;|&nbsp; 변경 없음 GRM <strong>${unchanged}</strong>명
+            <br><span class="text-muted">행을 클릭하면 상세 내역이 펼쳐집니다.</span>`;
+        document.getElementById('adminResultArea').style.display = 'block';
+    }
+
+    function downloadGrmDataResult() {
+        if (!adminAnalysisResult) return alert('먼저 분석을 실행해주세요.');
+        const result = adminAnalysisResult.slice().sort((a, b) => a.colIndex - b.colIndex);
+
+        // Sheet 1: GRM별_지점코드
+        const sheet1 = [];
+        sheet1.push(result.map(r => r.codeRaw));
+        sheet1.push(result.map(r => r.name));
+        const maxLen = Math.max(0, ...result.map(r => r.finalCodes.length));
+        for (let i = 0; i < maxLen; i++) sheet1.push(result.map(r => r.finalCodes[i] != null ? r.finalCodes[i] : null));
+        const ws1 = XLSX.utils.aoa_to_sheet(sheet1);
+
+        // Sheet 2: {YYMMDD} 변경내역
+        const sheet2 = [];
+        result.forEach(r => {
+            const a = r.added.length, d = r.removed.length;
+            if (a === 0 && d === 0) return;
+            sheet2.push([`[${r.codeRaw}]`, r.name, `추가: ${a}건 / 삭제: ${d}건`]);
+            sheet2.push(['구분', '지점코드', '대리점명', '본부명', '지점명']);
+            r.addedDetails.forEach(x => sheet2.push(['추가', x.branchCode, x.agency || '', x.hq || '', x.branchName || '']));
+            r.removedDetails.forEach(x => sheet2.push(['삭제', x.branchCode, x.agency || '', x.hq || '', x.branchName || '']));
+            sheet2.push([]);
+        });
+        if (sheet2.length === 0) sheet2.push(['변경 사항이 없습니다.']);
+        const ws2 = XLSX.utils.aoa_to_sheet(sheet2);
+
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const sheetName = `${yy}${mm}${dd} 변경내역`;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws1, 'GRM별_지점코드');
+        XLSX.utils.book_append_sheet(wb, ws2, sheetName);
+        XLSX.writeFile(wb, 'GRM_Data.xlsx');
+    }
+
+    document.addEventListener('DOMContentLoaded', initAdminDropzone);
 </script>
 </body>
 </html>
