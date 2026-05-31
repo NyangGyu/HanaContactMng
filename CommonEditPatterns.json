@@ -36,23 +36,13 @@
   },
   {
     "type": "replace",
-    "find": "에셋",
-    "replace": ""
-  },
-  {
-    "type": "replace",
     "find": "E센트럴 이센트럴",
     "replace": "E센트럴"
   },
   {
     "type": "replace",
     "find": "KS두레 케이에스두레센트럴",
-    "replace": "KS두레센트럴"
-  },
-  {
-    "type": "replace",
-    "find": "KS두레 케이에스두레센트럴",
-    "replace": "KS두레센트럴"
+    "replace": "KS두레 센트럴"
   },
   {
     "type": "replace",
@@ -168,5 +158,45 @@
     "type": "replace",
     "find": "케이지에이",
     "replace": "KGA"
+  },
+  {
+    "type": "replace",
+    "find": "KS두레트러스트",
+    "replace": "KS두레 트러스트"
+  },
+  {
+    "type": "replace",
+    "find": "KU 케이유송파",
+    "replace": "KU 송파"
+  },
+  {
+    "type": "replace",
+    "find": "더블유에셋",
+    "replace": "W에셋"
+  },
+  {
+    "type": "replace",
+    "find": "스카이블루에셋",
+    "replace": "스카이블루"
+  },
+  {
+    "type": "replace",
+    "find": "에셋마스터마스타인스",
+    "replace": "에셋마스터인스"
+  },
+  {
+    "type": "replace",
+    "find": "KGA에셋",
+    "replace": "KGA"
+  },
+  {
+    "type": "replace",
+    "find": "프라임에셋",
+    "replace": "프라임"
+  },
+  {
+    "type": "replace",
+    "find": "한화라이프랩",
+    "replace": "한화라랩"
   }
 ]
