@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v0.7.4</title>
+    <title>Hana 연락처 정리 도우미 v0.8.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <!-- 스타일(셀 배경색/글자색) 지원용 SheetJS 포크. 메인 XLSX(0.20.0)는 그대로 두고 별도 네임스페이스(XLSXStyle)로 격리 -->
+    <script>window.__origXLSX = window.XLSX;</script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script>window.XLSXStyle = window.XLSX; window.XLSX = window.__origXLSX; delete window.__origXLSX;</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
@@ -47,7 +51,7 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.7.4</span></h2>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v0.8.1</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div class="d-flex align-items-end gap-2">
@@ -1048,8 +1052,10 @@
                 const added = newCodes.filter(bc => !oldCodeSet.has(bc));
 
                 const newDetailMap = new Map(newEntries.map(e => [e.branchCode, e]));
-                const addedDetails = added.map(bc => newDetailMap.get(bc));
-                const removedDetails = removed.map(bc => allBranchInfo.get(bc) || { branchCode: bc, agency: '-', hq: '-', branchName: '-' });
+                // 같은 지점코드의 info 객체는 allBranchInfo / newGrmMap 사이에서 공유되므로,
+                // GRM별 비고(note)를 독립적으로 부여하려면 반드시 복제해서 사용한다.
+                const addedDetails = added.map(bc => ({ ...newDetailMap.get(bc), note: '' }));
+                const removedDetails = removed.map(bc => ({ ...(allBranchInfo.get(bc) || { branchCode: bc, agency: '-', hq: '-', branchName: '-' }), note: '' }));
 
                 result.push({
                     colIndex: c,
@@ -1058,6 +1064,26 @@
                     finalCodes: [...kept, ...added]
                 });
             }
+
+            // 6. 이동/인계 추적 → 비고(note) 부여
+            //    - 삭제된 지점: 신규 파일에서 그 코드를 담당하게 된 다른 GRM이 있으면 "이동 ▶ [사업단] - 이름"
+            //    - 추가된 지점: 기존 파일에서 그 코드를 담당하던 다른 GRM이 있으면 "기존 [사업단] - 이름 ▶ 인계", 없으면 "신규 개설"
+            const newOwnerByCode = new Map(); // branchCode -> 신규 파일 기준 담당 GRM(result 항목)
+            const oldOwnerByCode = new Map(); // branchCode -> 기존 파일 기준 담당 GRM(result 항목)
+            result.forEach(r => {
+                r.newCodes.forEach(bc => { if (!newOwnerByCode.has(bc)) newOwnerByCode.set(bc, r); });
+                r.oldCodes.forEach(bc => { if (!oldOwnerByCode.has(bc)) oldOwnerByCode.set(bc, r); });
+            });
+            result.forEach(r => {
+                r.removedDetails.forEach(x => {
+                    const owner = newOwnerByCode.get(x.branchCode);
+                    x.note = (owner && owner.matchCode !== r.matchCode) ? `이동 ▶ ${owner.name}` : '';
+                });
+                r.addedDetails.forEach(x => {
+                    const prev = oldOwnerByCode.get(x.branchCode);
+                    x.note = (prev && prev.matchCode !== r.matchCode) ? `기존 ${prev.name} ▶ 인계` : '신규 개설';
+                });
+            });
 
             adminAnalysisResult = result;
             renderAdminResult(result);
@@ -1085,10 +1111,10 @@
             if (!hasChange) unchanged++;
 
             const detailRows = (r.added.length === 0 && r.removed.length === 0)
-                ? `<tr><td colspan="5" class="text-muted small py-2">변경 사항이 없습니다.</td></tr>`
+                ? `<tr><td colspan="6" class="text-muted small py-2">변경 사항이 없습니다.</td></tr>`
                 : [
-                    ...r.addedDetails.map(d => `<tr class="table-success"><td><span class="badge bg-success">추가</span></td><td>${d.branchCode}</td><td class="text-start">${d.agency || '-'}</td><td class="text-start">${d.hq || '-'}</td><td class="text-start">${d.branchName || '-'}</td></tr>`),
-                    ...r.removedDetails.map(d => `<tr class="table-danger"><td><span class="badge bg-danger">삭제</span></td><td>${d.branchCode}</td><td class="text-start">${d.agency || '-'}</td><td class="text-start">${d.hq || '-'}</td><td class="text-start">${d.branchName || '-'}</td></tr>`)
+                    ...r.addedDetails.map(d => `<tr class="table-success"><td><span class="badge bg-success">추가</span></td><td>${d.branchCode}</td><td class="text-start">${d.agency || '-'}</td><td class="text-start">${d.hq || '-'}</td><td class="text-start">${d.branchName || '-'}</td><td class="text-start fw-bold">${d.note || ''}</td></tr>`),
+                    ...r.removedDetails.map(d => `<tr class="table-danger"><td><span class="badge bg-danger">삭제</span></td><td>${d.branchCode}</td><td class="text-start">${d.agency || '-'}</td><td class="text-start">${d.hq || '-'}</td><td class="text-start">${d.branchName || '-'}</td><td class="text-start fw-bold">${d.note || ''}</td></tr>`)
                   ].join('');
 
             return `
@@ -1105,7 +1131,7 @@
                 <tr class="collapse" id="admDetail${idx}">
                     <td colspan="8" class="p-0">
                         <table class="table table-sm mb-0 small">
-                            <thead class="table-secondary"><tr><th style="width:80px;">구분</th><th style="width:100px;">지점코드</th><th class="text-start">대리점명</th><th class="text-start">본부명</th><th class="text-start">지점명</th></tr></thead>
+                            <thead class="table-secondary"><tr><th style="width:80px;">구분</th><th style="width:100px;">지점코드</th><th class="text-start">대리점명</th><th class="text-start">본부명</th><th class="text-start">지점명</th><th class="text-start" style="width:220px;">비고</th></tr></thead>
                             <tbody>${detailRows}</tbody>
                         </table>
                     </td>
@@ -1129,6 +1155,8 @@
 
     function downloadGrmDataResult() {
         if (!adminAnalysisResult) return alert('먼저 분석을 실행해주세요.');
+        // 셀 색상(노란 배경/빨간 글자)을 쓰려면 스타일 지원 빌드(XLSXStyle)가 필요. 메인 XLSX(0.20.0)는 스타일 write 미지원.
+        const XL = window.XLSXStyle || XLSX;
         const result = adminAnalysisResult.slice().sort((a, b) => a.colIndex - b.colIndex);
 
         // Sheet 1: GRM별_지점코드
@@ -1137,21 +1165,35 @@
         sheet1.push(result.map(r => r.name));
         const maxLen = Math.max(0, ...result.map(r => r.finalCodes.length));
         for (let i = 0; i < maxLen; i++) sheet1.push(result.map(r => r.finalCodes[i] != null ? r.finalCodes[i] : null));
-        const ws1 = XLSX.utils.aoa_to_sheet(sheet1);
+        const ws1 = XL.utils.aoa_to_sheet(sheet1);
 
-        // Sheet 2: {YYMMDD} 변경내역
+        // Sheet 2: {YYMMDD} 변경내역  (구분/지점코드/대리점명/본부명/지점명/비고 = A~F)
         const sheet2 = [];
+        const rowMeta = []; // 행별 스타일 메타: 'grm'(헤더), 'removed'(삭제), 그 외
         result.forEach(r => {
             const a = r.added.length, d = r.removed.length;
             if (a === 0 && d === 0) return;
-            sheet2.push([`[${r.codeRaw}]`, r.name, `추가: ${a}건 / 삭제: ${d}건`]);
-            sheet2.push(['구분', '지점코드', '대리점명', '본부명', '지점명']);
-            r.addedDetails.forEach(x => sheet2.push(['추가', x.branchCode, x.agency || '', x.hq || '', x.branchName || '']));
-            r.removedDetails.forEach(x => sheet2.push(['삭제', x.branchCode, x.agency || '', x.hq || '', x.branchName || '']));
-            sheet2.push([]);
+            sheet2.push([`[${r.codeRaw}]`, r.name, `추가: ${a}건 / 삭제: ${d}건`]); rowMeta.push('grm');
+            sheet2.push(['구분', '지점코드', '대리점명', '본부명', '지점명', '비고']); rowMeta.push('colhdr');
+            r.addedDetails.forEach(x => { sheet2.push(['추가', x.branchCode, x.agency || '', x.hq || '', x.branchName || '', x.note || '']); rowMeta.push('added'); });
+            r.removedDetails.forEach(x => { sheet2.push(['삭제', x.branchCode, x.agency || '', x.hq || '', x.branchName || '', x.note || '']); rowMeta.push('removed'); });
+            sheet2.push([]); rowMeta.push('blank');
         });
-        if (sheet2.length === 0) sheet2.push(['변경 사항이 없습니다.']);
-        const ws2 = XLSX.utils.aoa_to_sheet(sheet2);
+        if (sheet2.length === 0) { sheet2.push(['변경 사항이 없습니다.']); rowMeta.push('blank'); }
+        const ws2 = XL.utils.aoa_to_sheet(sheet2);
+
+        // 색상 스타일: GRM 헤더행 A~F 노란 배경 / 삭제행 A~F 빨간 글자
+        const YELLOW = { fill: { patternType: 'solid', fgColor: { rgb: 'FFFF00' } }, font: { bold: true } };
+        const RED = { font: { color: { rgb: 'FFFF0000' } } };
+        for (let i = 0; i < rowMeta.length; i++) {
+            const style = rowMeta[i] === 'grm' ? YELLOW : (rowMeta[i] === 'removed' ? RED : null);
+            if (!style) continue;
+            for (let col = 0; col < 6; col++) {
+                const addr = XL.utils.encode_cell({ r: i, c: col });
+                if (!ws2[addr]) ws2[addr] = { t: 's', v: '' }; // 빈 셀(D~F 등)도 색칠하려면 셀 생성 필요
+                ws2[addr].s = style;
+            }
+        }
 
         const now = new Date();
         const yy = String(now.getFullYear()).slice(2);
@@ -1159,10 +1201,10 @@
         const dd = String(now.getDate()).padStart(2, '0');
         const sheetName = `${yy}${mm}${dd} 변경내역`;
 
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws1, 'GRM별_지점코드');
-        XLSX.utils.book_append_sheet(wb, ws2, sheetName);
-        XLSX.writeFile(wb, 'GRM_Data.xlsx');
+        const wb = XL.utils.book_new();
+        XL.utils.book_append_sheet(wb, ws1, 'GRM별_지점코드');
+        XL.utils.book_append_sheet(wb, ws2, sheetName);
+        XL.writeFile(wb, 'GRM_Data.xlsx');
     }
 
     function toggleAllAdminDetails() {
