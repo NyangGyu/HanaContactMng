@@ -213,7 +213,19 @@
                     <div class="text-muted" style="font-size: 0.85rem;">행(Row) 더블클릭: 개별 수동 편집</div>
                 </div>
             </div>
-            
+
+            <div id="dupNameActionBar" class="align-items-center flex-wrap gap-2 px-3 py-2" style="display:none; background:#fff4e6; border-top:1px solid #ffe0b2;">
+                <i class="bi bi-people-fill text-warning"></i>
+                <span class="fw-bold text-dark">이름중복 일괄 구분 <span class="text-muted fw-normal small">(맨 끝에 A·B·C 추가) :</span></span>
+                <button class="btn btn-sm btn-warning fw-bold text-dark shadow-sm" onclick="applyDupNameSuffix('all')">
+                    모두 A·B·C <span class="fw-normal small">(1번째 A · 2번째 B…)</span>
+                </button>
+                <button class="btn btn-sm btn-outline-warning fw-bold text-dark shadow-sm" onclick="applyDupNameSuffix('fromSecond')">
+                    2번째부터 B·C <span class="fw-normal small">(1번째 유지 · 2번째 B…)</span>
+                </button>
+                <span class="text-muted small ms-1"><i class="bi bi-info-circle"></i> 그룹 내 번호순으로 부여 · 되돌리려면 상단 [취소]</span>
+            </div>
+
             <div class="card-body p-0 table-scroll-area">
                 <table class="table table-hover table-sm mb-0 text-center align-middle" style="table-layout: fixed;">
                     <colgroup>
@@ -662,6 +674,8 @@
         const isDupNameOnly = document.getElementById('viewDupName').checked;
 
         recomputeDupNames();
+        const dupBar = document.getElementById('dupNameActionBar');
+        if(dupBar) dupBar.style.display = isDupNameOnly ? 'flex' : 'none';
 
         const searchStr = document.getElementById('searchInput').value.trim().toLowerCase();
         const keywords = searchStr ? searchStr.split(/\s+/) : [];
@@ -686,6 +700,39 @@
             return (a.phone || '') < (b.phone || '') ? -1 : 1;
         });
         renderTable();
+    }
+
+    // 순번(0-based) → 엑셀식 알파벳 (0=A, 1=B … 25=Z, 26=AA)
+    function colLetter(i) {
+        let s = '', n = i + 1;
+        while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+        return s;
+    }
+    // 이름중복 그룹에 번호순으로 A·B·C 구분 접미를 일괄 부여
+    //   mode 'all'        : 1번째 A, 2번째 B, 3번째 C …
+    //   mode 'fromSecond' : 1번째 유지, 2번째 B, 3번째 C … (첫 사람 이름은 그대로)
+    function applyDupNameSuffix(mode) {
+        recomputeDupNames();
+        if (dupNameKeys.size === 0) { alert('이름중복 대상이 없습니다.'); return; }
+        // 그룹 구성 (globalData 기준, 번호순 정렬 → 화면 표시 순서와 동일)
+        const groups = new Map();
+        globalData.forEach(d => { const k = nameKey(d.tempName); if (dupNameKeys.has(k)) { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(d); } });
+        const modeLabel = mode === 'all' ? '모두 A·B·C' : '2번째부터 B·C';
+        if (!confirm(`이름중복 ${groups.size}개 그룹에 "${modeLabel}" 구분 접미를 붙입니다.\n(되돌리려면 상단 [취소])\n\n적용할까요?`)) return;
+
+        saveState();
+        let changed = 0;
+        const start = (mode === 'all') ? 0 : 1;   // fromSecond는 첫 번째(idx 0) 유지
+        groups.forEach(list => {
+            list.sort((a, b) => (a.phone || '') < (b.phone || '') ? -1 : (a.phone || '') > (b.phone || '') ? 1 : 0);
+            list.forEach((d, idx) => {
+                if (idx < start) return;
+                d.tempName = nameKey(d.tempName) + ' ' + colLetter(idx);
+                changed++;
+            });
+        });
+        applyViewFilter();
+        showToastMessage(`이름중복 ${changed}건에 구분 접미(${modeLabel})를 적용했습니다`, 'primary');
     }
 
     function updateCountUI() {
