@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>구글 연락처 정리 도우미</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Malgun Gothic', sans-serif; padding-bottom: 80px; }
+        .home-btn { position: fixed; top: 12px; left: 12px; z-index: 10000; font-weight: bold; }
+        .stepper { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 22px; }
+        .stepper .step { flex: 1; min-width: 120px; text-align: center; padding: 10px 6px; border-radius: 8px;
+            background: #e9ecef; color: #6c757d; font-weight: 700; font-size: .9rem; cursor: pointer; border: 2px solid transparent; }
+        .stepper .step .n { display:inline-block; width:22px; height:22px; line-height:22px; border-radius:50%; background:#adb5bd; color:#fff; margin-right:5px; font-size:.8rem; }
+        .stepper .step.active { background: #128a4f; color: #fff; }
+        .stepper .step.active .n { background: #fff; color: #128a4f; }
+        .stepper .step.done { background: #d1e7dd; color: #0f5132; }
+        .stepper .step.done .n { background: #198754; }
+        .stepper .step.disabled { opacity: .5; cursor: not-allowed; }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .dropzone { border: 3px dashed #1a9e5f; border-radius: 12px; background: #f8fbf9; padding: 34px 20px; text-align: center; cursor: pointer; transition: all .2s; }
+        .dropzone.dragover { background: #e3f5ea; border-color: #0f5132; transform: scale(1.01); }
+        .dropzone.loaded { border-style: solid; border-color: #198754; background: #eaf7ef; }
+        .dropzone .ico { font-size: 2.4rem; color: #1a9e5f; }
+        .guide { background: #eef7f1; border-left: 5px solid #198754; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; }
+        .guide h6 { font-weight: 800; color: #0f5132; margin-bottom: 8px; }
+        .guide ul { margin: 0; padding-left: 1.1rem; }
+        .stat-card { border-radius: 12px; padding: 16px; color: #fff; text-align: center; height: 100%; }
+        .stat-card .num { font-size: 2rem; font-weight: 800; line-height: 1; }
+        .stat-card .lbl { font-size: .85rem; opacity: .95; margin-top: 6px; }
+        .table-scroll { border: 1px solid #dee2e6; border-radius: 8px; }
+        .table-scroll thead th { position: sticky; top: 0; z-index: 2; background: #f1f3f5; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+        /* 대량 목록 성능: 화면 밖 행은 렌더 생략 + 고정 레이아웃 */
+        table.big { table-layout: fixed; width: 100%; }
+        table.big td { overflow-wrap: anywhere; }
+        table.big tbody tr { content-visibility: auto; }
+        table.big-l tbody tr { contain-intrinsic-size: 0 44px; }   /* 이전담당·개인(짧은 행) */
+        table.big-m tbody tr { contain-intrinsic-size: 0 150px; }  /* 호칭정리(긴 행) */
+        table.big tbody td { user-select: none; }
+        .spinner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.82); display: none; z-index: 9999; justify-content: center; align-items: center; color: #fff; flex-direction: column; }
+        .toolbar { background: #fff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 2px 4px rgba(0,0,0,.05); border-left: 4px solid #198754; margin-bottom: 14px; }
+        .name-old { color: #b02a37; text-decoration: line-through; text-decoration-color:#e79aa1; }
+        .name-new { color: #0f5132; font-weight: 700; }
+        .badge-org { background:#ffe8cc; color:#8a4b08; font-weight:600; }
+        .badge-hon { background:#d0ebff; color:#0b5ed7; font-weight:600; }
+        .navbtns { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #dee2e6; padding: 10px 20px; z-index: 5000; box-shadow: 0 -2px 8px rgba(0,0,0,.05); }
+        .mini { font-size: .82rem; color: #6c757d; }
+        code { color:#0f5132; }
+        .choice-cell label { display:block; font-size:.85rem; margin-bottom:2px; cursor:pointer; }
+        .fin-cell { background:#eafaf0; border-left:3px solid #198754; }
+        .fin-name { font-weight:800; font-size:1.02rem; color:#0f5132; line-height:1.3; word-break:keep-all; }
+        .fin-tag { font-size:.72rem; font-weight:700; padding:1px 6px; border-radius:6px; }
+    </style>
+</head>
+<body>
+
+<a href="index.html" class="btn btn-outline-secondary btn-sm shadow-sm home-btn" title="도구 선택 화면으로">
+    <i class="bi bi-grid-3x3-gap-fill"></i> 도구 선택
+</a>
+
+<div class="spinner-overlay" id="spinner">
+    <div class="spinner-border text-success mb-3" style="width:4rem;height:4rem;"></div>
+    <h4 id="spinnerText" class="fw-bold">처리 중입니다...</h4>
+</div>
+
+<div class="container py-4" style="max-width: 1180px;">
+
+    <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-3">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미</h2>
+            <p class="text-secondary mb-0">이미 저장된 구글 주소록을 <b>현재 담당 명단</b>과 대조하여, 호칭·이전담당·개인 연락처를 정리합니다.</p>
+        </div>
+    </div>
+
+    <!-- 진행 단계 -->
+    <div class="stepper" id="stepper">
+        <div class="step active" data-goto="0"><span class="n">1</span>파일 업로드</div>
+        <div class="step disabled" data-goto="1"><span class="n">2</span>대조 분석</div>
+        <div class="step disabled" data-goto="2"><span class="n">3</span>호칭 정리</div>
+        <div class="step disabled" data-goto="3"><span class="n">4</span>이전 담당</div>
+        <div class="step disabled" data-goto="4"><span class="n">5</span>개인 연락처</div>
+        <div class="step disabled" data-goto="5"><span class="n">6</span>내보내기</div>
+    </div>
+
+    <!-- ===================== STEP 1: 업로드 ===================== -->
+    <section class="wizard-step active" id="step0">
+        <div class="guide">
+            <h6><i class="bi bi-info-circle-fill"></i> 이 단계에서 하는 일</h6>
+            <ul>
+                <li><b>파일 2개</b>를 올립니다. 아무것도 서버로 전송되지 않고, 모두 이 브라우저 안에서만 처리됩니다.</li>
+                <li><b>① 구글 주소록 백업(CSV)</b> — 구글 연락처에서 “내보내기 → Google CSV”로 받은 <code>contacts.csv</code>. (지금 저장돼 있는 <u>전체</u> 연락처)</li>
+                <li><b>② 현재 담당 설계사 명단</b> — Hana 도구로 만든 <code>관리용 엑셀(.xlsx)</code> 또는 <code>모바일 vCard(.vcf)</code>. (지금 기준 <u>담당 구역</u>)</li>
+                <li>두 파일을 대조해서, 지금도 담당인 사람은 <b>호칭만 정리</b>하고, 담당이 아닌 사람은 <b>이전담당/개인</b>으로 분류해 드립니다.</li>
+            </ul>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="dropzone" id="dzOld">
+                    <i class="bi bi-filetype-csv ico"></i>
+                    <h5 class="fw-bold mt-2 mb-1">① 구글 주소록 CSV</h5>
+                    <div class="mini">contacts.csv 를 끌어다 놓거나 클릭해서 선택</div>
+                    <div id="dzOldInfo" class="mt-2 fw-bold text-success"></div>
+                    <input type="file" id="fileOld" accept=".csv" hidden>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="dropzone" id="dzNew">
+                    <i class="bi bi-person-vcard ico"></i>
+                    <h5 class="fw-bold mt-2 mb-1">② 현재 담당 명단 (.xlsx / .vcf)</h5>
+                    <div class="mini">관리용 엑셀 또는 모바일 vCard 를 끌어다 놓거나 클릭</div>
+                    <div id="dzNewInfo" class="mt-2 fw-bold text-success"></div>
+                    <input type="file" id="fileNew" accept=".xlsx,.xls,.vcf" hidden>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button class="btn btn-success btn-lg px-5 fw-bold" id="btnAnalyze" disabled>
+                <i class="bi bi-search"></i> 대조 분석 시작
+            </button>
+            <div class="mini mt-2">두 파일을 모두 올리면 활성화됩니다.</div>
+        </div>
+    </section>
+
+    <!-- ===================== STEP 2: 분석 결과 ===================== -->
+    <section class="wizard-step" id="step1">
+        <div class="guide">
+            <h6><i class="bi bi-diagram-3-fill"></i> 대조 결과 — 4가지로 분류했습니다</h6>
+            <ul>
+                <li><b>전화번호</b>가 같으면 “같은 사람”으로 봅니다. (전화번호가 없으면 <b>사번(G번호)</b>으로 보조 매칭)</li>
+                <li>같은 번호가 여러 번 저장돼 있던 <b>중복</b>은 하나로 합치고, 기존에 붙어있던 이름들을 모두 후보로 보여줍니다.</li>
+            </ul>
+        </div>
+        <div class="row g-3 mb-4" id="statCards"></div>
+
+        <div class="card">
+            <div class="card-body">
+                <h6 class="fw-bold"><i class="bi bi-list-check"></i> 다음 단계에서 이렇게 정리합니다</h6>
+                <ol class="mb-0">
+                    <li><b>호칭 정리</b> — 지금도 담당인 설계사. 기존 이름(직급 포함)과 신규 이름을 나란히 보고 <b>어떤 형태로 저장할지 직접 선택</b>합니다.</li>
+                    <li><b>이전 담당</b> — 사번은 있지만 현재 명단엔 없는 사람(해촉·타지역 이동 등). <b>남길 사람만 선택</b>하고 나머지는 삭제합니다.</li>
+                    <li><b>개인 연락처</b> — 사번이 없는 개인/기타 연락처. <b>저장할 사람만 선택</b>합니다. (기관·스팸 의심은 미리 삭제 후보로 표시)</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== STEP 3: 호칭 정리 ===================== -->
+    <section class="wizard-step" id="step2">
+        <div class="guide">
+            <h6><i class="bi bi-person-badge-fill"></i> ① 호칭 정리 — 기존/신규를 보고 직접 선택</h6>
+            <ul>
+                <li><b>기존(구글)</b> 이름엔 직급이 붙어있고(<span class="name-old">A+ 강남 김정란 EM</span>), <b>신규(현재 명단)</b>는 깔끔합니다(<span class="name-new">A+ 강남 김정란</span>).</li>
+                <li>소속이 바뀐 경우(<span class="badge badge-org">소속변경</span>)엔 신규 소속이 최신입니다. 행마다 4가지 중 <b>실제 저장할 이름</b>을 고르세요.</li>
+                <li>많으면 상단 <b>일괄 적용</b> 버튼으로 한 번에 정한 뒤, 필요한 것만 개별 수정하세요.</li>
+                <li>소속이 바뀐 사람만 따로 보려면 <b>[소속변경만]</b> 스위치를 켜고, 목록이 필요하면 <b>[소속변경 엑셀 저장]</b>으로 내려받으세요.</li>
+                <li>정리를 마치면 아래 <b class="text-primary">[정리된 담당 명단 바로 저장]</b>으로 <b>현재 담당만</b>(이전담당·개인 제외) 관리엑셀·모바일 vCard·까톡오토 양식으로 즉시 받을 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="toolbar d-flex flex-wrap gap-2 align-items-center">
+            <span class="fw-bold me-1">일괄 적용 :</span>
+            <button class="btn btn-sm btn-outline-success" onclick="bulkChoice('new')">전체 · 신규 그대로</button>
+            <button class="btn btn-sm btn-outline-primary" onclick="bulkChoice('newhon')">전체 · 신규+기존호칭</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="bulkChoice('old')">전체 · 기존 그대로</button>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="exportOrgChanged()"><i class="bi bi-file-earmark-excel"></i> 소속변경 엑셀 저장</button>
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="onlyOrg" onchange="if(this.checked){document.getElementById('onlyDiff').checked=false;} renderMatched()">
+                    <label class="form-check-label mini fw-bold text-warning-emphasis" for="onlyOrg">소속변경만</label>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="onlyDiff" checked onchange="renderMatched()">
+                    <label class="form-check-label mini" for="onlyDiff">변경 필요한 것만</label>
+                </div>
+                <input type="text" class="form-control form-control-sm" style="width:200px" id="searchMatched" placeholder="이름 검색" oninput="dRenderMatched()">
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center p-2 mb-2 rounded" style="background:#e7f5ff;border:1px solid #a5d8ff">
+            <span class="fw-bold text-primary"><i class="bi bi-download"></i> 정리된 담당 명단 바로 저장
+                <span class="mini text-muted fw-normal">(이전담당·개인 제외 · 현재 담당만)</span> :</span>
+            <button class="btn btn-sm btn-success fw-bold" onclick="exportManagedExcel()"><i class="bi bi-file-earmark-excel"></i> 관리용 엑셀</button>
+            <button class="btn btn-sm btn-dark fw-bold" onclick="exportManagedVCard()"><i class="bi bi-phone-fill"></i> 모바일 vCard</button>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="exportKaTalk()"><i class="bi bi-chat-dots-fill"></i> 까톡오토 양식</button>
+        </div>
+        <div class="mini mb-2" id="matchedCount"></div>
+        <div class="table-scroll">
+            <table class="table table-sm table-hover align-middle mb-0 big big-m">
+                <thead><tr>
+                    <th style="width:22%">기존 이름 (구글)</th>
+                    <th style="width:16%">신규 이름 (현재)</th>
+                    <th style="width:38%">저장할 이름 선택</th>
+                    <th style="width:24%" class="fin-cell">✅ 최종 저장 이름</th>
+                </tr></thead>
+                <tbody id="matchedBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===================== STEP 4: 이전 담당 ===================== -->
+    <section class="wizard-step" id="step3">
+        <div class="guide">
+            <h6><i class="bi bi-person-dash-fill"></i> ② 이전 담당 정리 — 남길 사람만 체크</h6>
+            <ul>
+                <li>사번은 있지만 <b>현재 담당 명단엔 없는</b> 사람입니다. 해촉되었거나 다른 지역/담당으로 넘어간 경우가 대부분입니다.</li>
+                <li>기본은 <b>삭제</b>입니다. 개인적으로 계속 연락할 사람만 <b>“남김”에 체크</b>하세요. 체크 안 한 사람은 최종본에서 빠집니다.</li>
+                <li>💡 한 곳을 체크한 뒤 <b>Shift 키를 누른 채</b> 다른 곳을 클릭하면 <b>사이의 항목이 한꺼번에 선택/해제</b>됩니다.</li>
+            </ul>
+        </div>
+        <div class="toolbar d-flex flex-wrap gap-2 align-items-center">
+            <span class="fw-bold me-1">일괄 :</span>
+            <button class="btn btn-sm btn-outline-success" onclick="bulkKeep('ex',true)">전체 남김</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="bulkKeep('ex',false)">전체 삭제</button>
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <input type="text" class="form-control form-control-sm" style="width:220px" id="searchEx" placeholder="이름/메모/번호 검색" oninput="dRenderEx()">
+            </div>
+        </div>
+        <div class="mini mb-2" id="exCount"></div>
+        <div class="table-scroll">
+            <table class="table table-sm table-hover align-middle mb-0 big big-l">
+                <thead><tr>
+                    <th style="width:70px" class="text-center">남김</th>
+                    <th>이름 (구글)</th>
+                    <th style="width:140px">전화</th>
+                    <th style="width:34%">사번 / 메모</th>
+                </tr></thead>
+                <tbody id="exBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===================== STEP 5: 개인 연락처 ===================== -->
+    <section class="wizard-step" id="step4">
+        <div class="guide">
+            <h6><i class="bi bi-person-heart"></i> ③ 개인 연락처 정리 — 저장할 사람만 체크</h6>
+            <ul>
+                <li>사번이 없는 <b>개인·기타 연락처</b>입니다. 가족·지인뿐 아니라 <span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span>(타 GA 설계사 등)·<span class="badge bg-danger-subtle text-danger">스팸 의심</span>도 섞여 있습니다.</li>
+                <li>기본값은 <b>순수 개인만 남김</b>입니다. <span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span>(타 GA 설계사·법인)과 <span class="badge bg-danger-subtle text-danger">스팸 의심</span>은 미리 <b>삭제(체크 해제)</b> 해 두었습니다.</li>
+                <li>업무 연락처 중 계속 남길 사람은 <b>개별 체크</b>하거나, 업무까지 모두 남기려면 <b>[전체 남김]</b>을 누르세요. 기본값으로 되돌리려면 <b>[개인만 남김]</b>.</li>
+                <li><b>“남김”에 체크</b>된 사람만 최종본에 저장됩니다.</li>
+                <li>💡 한 곳을 체크한 뒤 <b>Shift 키를 누른 채</b> 다른 곳을 클릭하면 <b>사이의 항목이 한꺼번에 선택/해제</b>됩니다.</li>
+                <li>아래 <b class="text-primary">[정리된 개인 명단 저장]</b>은 여기서 남긴 개인에 더해 <b>이전 담당(②)에서 남긴 사람들까지 합쳐</b>(=내 개인 인맥 전체) 관리엑셀·vCard·까톡오토로 내려받습니다.</li>
+            </ul>
+        </div>
+        <div class="toolbar d-flex flex-wrap gap-2 align-items-center">
+            <span class="fw-bold me-1">일괄 :</span>
+            <button class="btn btn-sm btn-outline-success" onclick="bulkKeep('per',true)">전체 남김</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="bulkKeep('per',false)">전체 삭제</button>
+            <button class="btn btn-sm btn-primary" onclick="keepNonJunk()"><i class="bi bi-person-check"></i> 개인만 남김 (업무·스팸 삭제)</button>
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="hideJunk" onchange="renderPer()">
+                    <label class="form-check-label mini" for="hideJunk">의심 항목 숨기기</label>
+                </div>
+                <input type="text" class="form-control form-control-sm" style="width:200px" id="searchPer" placeholder="이름/번호 검색" oninput="dRenderPer()">
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center p-2 mb-2 rounded" style="background:#e7f5ff;border:1px solid #a5d8ff">
+            <span class="fw-bold text-primary"><i class="bi bi-download"></i> 정리된 개인 명단 저장
+                <span class="mini text-muted fw-normal">(남긴 개인 + 남긴 이전담당 = 내 개인 인맥 전체)</span> :</span>
+            <button class="btn btn-sm btn-success fw-bold" onclick="exportPerExcel()"><i class="bi bi-file-earmark-excel"></i> 관리용 엑셀</button>
+            <button class="btn btn-sm btn-dark fw-bold" onclick="exportPerVCard()"><i class="bi bi-phone-fill"></i> 모바일 vCard</button>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="exportPerKaTalk()"><i class="bi bi-chat-dots-fill"></i> 까톡오토 양식</button>
+        </div>
+        <div class="mini mb-2" id="perCount"></div>
+        <div class="table-scroll">
+            <table class="table table-sm table-hover align-middle mb-0 big big-l">
+                <thead><tr>
+                    <th style="width:70px" class="text-center">남김</th>
+                    <th>이름 (구글)</th>
+                    <th style="width:140px">전화</th>
+                    <th style="width:110px" class="text-center">분류</th>
+                </tr></thead>
+                <tbody id="perBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===================== STEP 6: 내보내기 ===================== -->
+    <section class="wizard-step" id="step5">
+        <div class="guide">
+            <h6><i class="bi bi-box-arrow-down"></i> 내보내기 — 최종본을 만들었습니다</h6>
+            <ul>
+                <li><b>구글 재업로드 CSV</b> — 정리된 최종 연락처. 구글 연락처에서 <b>가져오기(Import)</b> 하면 됩니다.</li>
+                <li><b>모바일 vCard(.vcf)</b> — 정리된 최종 연락처를 휴대폰에 바로 저장할 수 있는 vCard 3.0 형식으로 출력합니다.</li>
+                <li><b>관리용 엑셀(xlsx)</b> — 최종 저장 대상 전체를 <code>이름·연락처·사번/생년월일·권한구분·분류</code> 형식(HanaList 양식)으로 출력합니다.</li>
+                <li><b>까톡오토 양식(xlsx)</b> — 현재 담당 설계사 전체를 GGaTalk 친구등록 양식에 맞춰 출력합니다. (이름 전체를 <code>이름입력</code> 칸에 저장)</li>
+                <li>업로드 전, 아래 요약을 꼭 확인하세요.</li>
+            </ul>
+        </div>
+        <div class="row g-3 mb-4" id="finalStats"></div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-download"></i> 파일 다운로드</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-success fw-bold" onclick="exportGoogleCSV()"><i class="bi bi-filetype-csv"></i> 구글 재업로드 CSV 저장</button>
+                    <button class="btn btn-dark fw-bold" onclick="exportVCard()"><i class="bi bi-person-vcard"></i> 모바일 vCard 저장</button>
+                    <button class="btn btn-primary fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-earmark-excel"></i> 관리용 엑셀 저장</button>
+                    <button class="btn btn-warning text-dark fw-bold" onclick="exportKaTalk()"><i class="bi bi-chat-dots-fill"></i> 까톡오토 양식 저장</button>
+                    <button class="btn btn-outline-secondary fw-bold" onclick="exportReport()"><i class="bi bi-file-text"></i> 정리 요약 리포트(txt)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header fw-bold bg-light"><i class="bi bi-question-circle"></i> 구글 연락처에 다시 넣는 방법</div>
+            <div class="card-body">
+                <ol class="mb-2">
+                    <li>PC 웹브라우저에서 <b>contacts.google.com</b> 접속 (연락처를 동기화한 그 구글 계정).</li>
+                    <li>왼쪽 메뉴에서 기존 연락처를 정리하려면 먼저 전체 삭제가 필요합니다.
+                        <span class="text-danger">전체 삭제 전, 만약을 위해 방금 올린 <code>contacts.csv</code> 백업을 꼭 보관하세요.</span></li>
+                    <li>왼쪽 <b>가져오기(Import)</b> → 방금 저장한 <b>구글 재업로드 CSV</b> 파일 선택 → 가져오기.</li>
+                    <li>가져오면 라벨(<code>설계사</code>/<code>이전담당</code>/<code>개인</code>)이 자동 생성되어 분류돼 있습니다.</li>
+                    <li>휴대폰에서 동기화가 켜져 있으면 잠시 뒤 자동 반영됩니다.</li>
+                </ol>
+                <div class="mini text-danger"><i class="bi bi-exclamation-triangle-fill"></i> CSV 파일은 UTF-8(BOM 없음)로 저장됩니다. 구글 가져오기에는 이 형식이 맞습니다. (엑셀로 열면 한글이 깨져 보일 수 있으나 구글 업로드에는 문제 없습니다.)</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<!-- 하단 이동 버튼 -->
+<div class="navbtns d-flex justify-content-between align-items-center">
+    <button class="btn btn-outline-secondary" id="btnPrev" onclick="goStep(cur-1)" disabled><i class="bi bi-arrow-left"></i> 이전</button>
+    <span class="fw-bold text-secondary" id="stepLabel">1 / 6 · 파일 업로드</span>
+    <button class="btn btn-success" id="btnNext" onclick="goStep(cur+1)" disabled>다음 <i class="bi bi-arrow-right"></i></button>
+</div>
+
+<script>
+// ===================== 상태 =====================
+const S = {
+    oldHeader: [], colIdx: {}, oldGroups: [], newAgents: [],
+    matched: [], ex: [], per: [], brandNew: [],
+    loadedOld: false, loadedNew: false
+};
+let cur = 0;
+const STEP_LABELS = ['파일 업로드','대조 분석','호칭 정리','이전 담당','개인 연락처','내보내기'];
+
+// ===================== 유틸 =====================
+const spinner = (on, txt) => { const s=document.getElementById('spinner'); if(txt) document.getElementById('spinnerText').innerText=txt; s.style.display = on?'flex':'none'; };
+const normPhone = p => (p||'').replace(/[^0-9]/g,'');
+const gnumOf = s => { const m=(s||'').match(/G\d{6,}/i); return m?m[0].toUpperCase():''; };
+function fmtPhone(p){ const d=normPhone(p); if(d.length===11&&d.startsWith('010')) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10&&d.startsWith('01')) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p||''; }
+
+// 직급/호칭 사전 (뒤에 붙는 토큰)
+const HONOR = new Set(['회장','부회장','사장','부사장','전무','상무','이사','고문','감사','대표','대표이사','원장','위원장','위원',
+ '본부장','사업본부장','단장','부단장','사업단장','지사장','지점장','부지점장','소장','센터장','국장','실장','팀장','부팀장','총괄팀장','파트장','지부장','사업부장',
+ '부장','차장','과장','대리','주임','계장','사원','총무','총괄','CM','EM','GM','RM','FC','PM','님','선생님','여사님','기사님','사모님','교수','박사']);
+function isHonorToken(t){ if(!t) return false; if(HONOR.has(t)) return true; if(/^[\[(].*[\])]$/.test(t)) return true; // [스탭], (업무폰)
+    return false; }
+// 기존이름에서 신규이름 대비 '호칭' 추출
+function detectHonorific(oldName, newName){
+    const ot=oldName.trim().split(/\s+/), nt=newName.trim().split(/\s+/);
+    if(ot.length>nt.length && ot.slice(0,nt.length).join(' ')===nt.join(' ')) return ot.slice(nt.length).join(' ');
+    // 소속변경 등: 뒤에서부터 호칭 토큰 수집
+    let out=[]; for(let i=ot.length-1;i>=0;i--){ if(isHonorToken(ot[i])) out.unshift(ot[i]); else break; }
+    return out.join(' ');
+}
+// 개인 연락처 스팸/기관 의심 판별
+const JUNK_KW = ['인증','문의','고객센터','콜센터','상담','예약','병원','약국','은행','카드사','대출','택배','배송','세무','세금','신고','관리사무소','ARS','스팸','광고','안내','센터','접수','예방접종','주민센터','구청','시청','경찰','소방','우체국'];
+function isJunk(name, phone){
+    const nm=(name||'').trim(); const d=normPhone(phone);
+    if(!nm) return true;
+    if(/^[0-9\s\-().]+$/.test(nm)) return true;              // 이름이 숫자/기호만
+    if(d && d.length<=8) return true;                         // 1381, 1588 등 짧은 서비스번호
+    if(/^(15|16|18)\d{2}/.test(d)) return true;              // 15xx/16xx/18xx 대표번호
+    if(JUNK_KW.some(k=>nm.includes(k))) return true;
+    return false;
+}
+// 업무(비담당 설계사/타 GA/법인) 의심 — 개인 아님. 회사 접두어로 시작하거나 이름 끝이 직급.
+const COMPANY_RE = /^(A\+|HK|GA[K]?|DB|DGB|KB|NH|MG|AIA|ABL|BNP|삼성|한화|메리츠|교보|흥국|라이나|신한|미래에셋|동양|농협|하나|롯데|현대|우리|기업|프라임|영진|인카|피플라이프|리치앤?코|글로벌금융|지에이|굿리치|리더스|인슈어스|어시스트|파트너스?)\b/;
+function isBusiness(name){
+    const nm=(name||'').trim(); if(!nm) return false;
+    const toks=nm.split(/\s+/);
+    if(COMPANY_RE.test(nm)) return true;                      // 회사 접두어
+    if(toks.length>=2 && isHonorToken(toks[toks.length-1])) return true;  // 끝이 직급
+    if(toks.length>=3) return true;                           // 3토큰 이상(회사 지역 이름) = 업무 가능성
+    return false;
+}
+function csvCell(v){ v=(v==null)?'':String(v); return /[",\n\r]/.test(v)? '"'+v.replace(/"/g,'""')+'"' : v; }
+
+// ===================== CSV 파서 (RFC4180) =====================
+function parseCSV(text){
+    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const rows=[]; let row=[], cell='', q=false;
+    for(let i=0;i<text.length;i++){ const c=text[i];
+        if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; }
+        else { if(c==='"') q=true;
+            else if(c===','){ row.push(cell); cell=''; }
+            else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+            else if(c==='\r'){ /* skip */ }
+            else cell+=c; } }
+    if(cell!==''||row.length){ row.push(cell); rows.push(row); }
+    return rows;
+}
+
+// ===================== 파일 로딩 =====================
+function setupDrop(dzId, inputId, handler){
+    const dz=document.getElementById(dzId), inp=document.getElementById(inputId);
+    dz.addEventListener('click',()=>inp.click());
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover'); if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0], dz);});
+    inp.addEventListener('change',e=>{ if(e.target.files[0]) handler(e.target.files[0], dz); });
+}
+
+function loadOld(file, dz){
+    const r=new FileReader();
+    r.onload=e=>{
+        const rows=parseCSV(e.target.result);
+        if(!rows.length){ alert('CSV를 읽지 못했습니다.'); return; }
+        S.oldHeader=rows[0];
+        S.colIdx={}; S.oldHeader.forEach((h,i)=>S.colIdx[h.trim()]=i);
+        S.oldRows=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()!==''));
+        S.loadedOld=true;
+        document.getElementById('dzOldInfo').innerText=`✔ ${S.oldRows.length.toLocaleString()}건 로드됨`;
+        dz.classList.add('loaded');
+        checkReady();
+    };
+    r.readAsText(file,'UTF-8');
+}
+
+function loadNew(file, dz){
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(ext==='vcf'){
+        const r=new FileReader();
+        r.onload=e=>{ parseVcf(e.target.result); afterNew(dz); };
+        r.readAsText(file,'UTF-8');
+    } else {
+        const r=new FileReader();
+        r.onload=e=>{
+            const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+            const ws=wb.Sheets[wb.SheetNames[0]];
+            const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+            S.newAgents=[];
+            for(let i=1;i<aoa.length;i++){ const row=aoa[i]; if(!row||!row[0]) continue;
+                const name=String(row[0]).trim(), phone=String(row[1]||'').trim(), id=String(row[2]||'').trim(), role=String(row[3]||'').trim();
+                if(!name&&!phone) continue;
+                S.newAgents.push({name, phone, phoneKey:normPhone(phone), id, gnum:gnumOf(id), role});
+            }
+            afterNew(dz);
+        };
+        r.readAsArrayBuffer(file);
+    }
+}
+function parseVcf(text){
+    S.newAgents=[]; let cur={};
+    text.split(/\r?\n/).forEach(line=>{
+        if(line.startsWith('FN:')) cur.name=line.slice(3).trim();
+        else if(/^TEL/i.test(line)){ const m=line.match(/:(.*)$/); if(m){ cur.phone=m[1].trim(); } }
+        else if(line.startsWith('END:VCARD')){ if(cur.name){ S.newAgents.push({name:cur.name, phone:cur.phone||'', phoneKey:normPhone(cur.phone||''), id:'', gnum:'', role:''}); } cur={}; }
+    });
+}
+function afterNew(dz){
+    S.loadedNew=true;
+    document.getElementById('dzNewInfo').innerText=`✔ ${S.newAgents.length.toLocaleString()}명 로드됨`;
+    dz.classList.add('loaded');
+    checkReady();
+}
+function checkReady(){ document.getElementById('btnAnalyze').disabled = !(S.loadedOld && S.loadedNew); }
+
+// ===================== 대조 분석 =====================
+function getCol(row, name){ const i=S.colIdx[name]; return (i==null)?'':(row[i]||''); }
+function oldDisplayName(row){
+    const fn=getCol(row,'First Name'), mn=getCol(row,'Middle Name'), ln=getCol(row,'Last Name');
+    let nm=[fn,mn,ln].map(s=>s.trim()).filter(Boolean).join(' ').trim();
+    if(!nm) nm=getCol(row,'File As').trim();
+    return nm;
+}
+function oldPhone(row){
+    for(const k of ['Phone 1 - Value','Phone 2 - Value','Phone 3 - Value','Phone 4 - Value']){
+        const v=getCol(row,k); if(v&&v.trim()) return v.split(':::')[0].trim();
+    }
+    return '';
+}
+
+function analyze(){
+    spinner(true,'대조 분석 중...');
+    setTimeout(()=>{
+        // 신규 인덱스
+        const newByPhone=new Map(), newByGnum=new Map();
+        S.newAgents.forEach(a=>{ if(a.phoneKey) if(!newByPhone.has(a.phoneKey)) newByPhone.set(a.phoneKey,a); if(a.gnum&&!newByGnum.has(a.gnum)) newByGnum.set(a.gnum,a); });
+
+        // 기존 연락처를 전화번호로 그룹핑(중복 합치기)
+        const groups=new Map();  // phoneKey -> group
+        const noPhone=[];
+        S.oldRows.forEach(row=>{
+            const phRaw=oldPhone(row), pk=normPhone(phRaw);
+            const nm=oldDisplayName(row), notes=getCol(row,'Notes'), labels=getCol(row,'Labels');
+            const gnum=gnumOf(notes)||gnumOf(nm);
+            const entry={row, name:nm, phoneRaw:phRaw, notes, labels, gnum};
+            if(!pk){ noPhone.push({key:'', names:[nm], entries:[entry], phoneRaw:phRaw, notes, gnum}); return; }
+            if(!groups.has(pk)) groups.set(pk,{key:pk, names:[], entries:[], phoneRaw:phRaw, notes:'', gnum:''});
+            const g=groups.get(pk);
+            if(nm && !g.names.includes(nm)) g.names.push(nm);
+            g.entries.push(entry);
+            if(notes && !g.notes) g.notes=notes;
+            if(gnum && !g.gnum) g.gnum=gnum;
+        });
+        S.oldGroups=[...groups.values(), ...noPhone];
+
+        // 분류
+        S.matched=[]; S.ex=[]; S.per=[];
+        const matchedAgentKeys=new Set();
+        S.oldGroups.forEach(g=>{
+            const agent = (g.key&&newByPhone.get(g.key)) || (g.gnum&&newByGnum.get(g.gnum)) || null;
+            if(agent){
+                if(agent.phoneKey) matchedAgentKeys.add(agent.phoneKey);
+                if(agent.gnum) matchedAgentKeys.add('G:'+agent.gnum);
+                const newName=agent.name;
+                const primaryOld = g.names[0]||newName;
+                // 호칭은 후보 이름들 중 가장 길게 추출되는 것 사용
+                let honor='';
+                g.names.forEach(on=>{ const h=detectHonorific(on,newName); if(h.length>honor.length) honor=h; });
+                // 소속변경: 대표 기존이름에서 호칭을 뗀 부분이 신규이름과 다르면 소속이 바뀐 것
+                const primaryHon=detectHonorific(primaryOld,newName);
+                let oldBase=primaryOld;
+                if(primaryHon && primaryOld.endsWith(primaryHon)) oldBase=primaryOld.slice(0,-primaryHon.length).trim();
+                const orgChanged = (primaryOld!==newName) && (oldBase!==newName);
+                const withHon = honor? (newName+' '+honor) : newName;
+                let choice = honor? 'newhon' : 'new';   // 호칭 있으면 신규+호칭 기본, 없으면 신규
+                S.matched.push({group:g, agent, newName, honor, primaryOld, allOld:g.names.slice(),
+                    withHon, orgChanged, choice, custom:''});
+            } else if(g.gnum){
+                S.ex.push({group:g, name:g.names[0]||'', keep:false});
+            } else {
+                const nm=g.names[0]||'', junk=isJunk(nm, g.phoneRaw), biz=!junk && isBusiness(nm);
+                S.per.push({group:g, name:nm, junk, biz, keep:!junk && !biz});   // 기본: 순수 개인만 유지 (업무·스팸 삭제)
+            }
+        });
+
+        // 신규 담당 중 구글에 아예 없던 사람
+        S.brandNew=S.newAgents.filter(a=>{
+            const inPhone = a.phoneKey && matchedAgentKeys.has(a.phoneKey);
+            const inGnum = a.gnum && matchedAgentKeys.has('G:'+a.gnum);
+            return !inPhone && !inGnum;
+        });
+
+        buildStats(); renderMatched(); renderEx(); renderPer();
+        enableSteps();
+        spinner(false);
+        goStep(1);
+    },60);
+}
+
+function buildStats(){
+    const cards=[
+        {n:S.matched.length, l:'담당 설계사 (호칭 정리)', c:'#198754'},
+        {n:S.ex.length, l:'이전 담당 (사번 있음)', c:'#fd7e14'},
+        {n:S.per.length, l:'개인 연락처 후보', c:'#0d6efd'},
+        {n:S.brandNew.length, l:'신규 담당 (구글에 없음)', c:'#6f42c1'},
+    ];
+    document.getElementById('statCards').innerHTML = cards.map(c=>
+        `<div class="col-6 col-md-3"><div class="stat-card" style="background:${c.c}"><div class="num">${c.n.toLocaleString()}</div><div class="lbl">${c.l}</div></div></div>`).join('');
+}
+
+// ===================== 렌더: 호칭 정리 =====================
+function renderMatched(){
+    const onlyDiff=document.getElementById('onlyDiff').checked;
+    const onlyOrg=document.getElementById('onlyOrg').checked;
+    const q=document.getElementById('searchMatched').value.trim();
+    let list=S.matched.map((m,i)=>({m,i}));
+    if(onlyOrg) list=list.filter(x=> x.m.orgChanged );
+    else if(onlyDiff) list=list.filter(x=> x.m.primaryOld!==x.m.newName );
+    if(q) list=list.filter(x=> (x.m.primaryOld+' '+x.m.newName).includes(q));
+    const shown=list;
+    const orgTotal=S.matched.filter(m=>m.orgChanged).length;
+    document.getElementById('matchedCount').innerHTML =
+        `총 ${S.matched.length.toLocaleString()}명 중 표시 ${list.length.toLocaleString()}명 &nbsp;|&nbsp; <span class="badge badge-org">소속변경 ${orgTotal.toLocaleString()}건</span>`;
+    document.getElementById('matchedBody').innerHTML = shown.map(({m,i})=>{
+        const multi = m.allOld.length>1 ? `<div class="mini text-muted">+ ${m.allOld.slice(1).join(', ')}</div>` : '';
+        const orgBadge = m.orgChanged ? ' <span class="badge badge-org">소속변경</span>' : '';
+        const honBadge = m.honor ? ` <span class="badge badge-hon">${m.honor}</span>` : '';
+        const r=(val,label,disabled)=>`<label><input type="radio" name="mc${i}" value="${val}" ${m.choice===val?'checked':''} onchange="setChoice(${i},'${val}')" ${disabled?'disabled':''}> ${label}</label>`;
+        return `<tr>
+            <td><span class="name-old">${esc(m.primaryOld)}</span>${orgBadge}${honBadge}${multi}<div class="mini text-muted">${fmtPhone(m.group.phoneRaw)}</div></td>
+            <td><span class="name-new">${esc(m.newName)}</span></td>
+            <td class="choice-cell">
+                ${r('new','신규 그대로 · <b>'+esc(m.newName)+'</b>')}
+                ${r('newhon','신규+호칭 · <b>'+esc(m.withHon)+'</b>', !m.honor)}
+                ${r('old','기존 그대로 · '+esc(m.primaryOld))}
+                <label><input type="radio" name="mc${i}" value="custom" ${m.choice==='custom'?'checked':''} onchange="setChoice(${i},'custom')"> 직접 입력 :
+                    <input type="text" class="form-control form-control-sm d-inline-block" style="width:180px" value="${esc(m.custom||m.newName)}" oninput="setCustom(${i},this.value)" onfocus="setChoice(${i},'custom')"></label>
+            </td>
+            <td class="fin-cell"><div id="fin${i}">${finInner(m)}</div></td></tr>`;
+    }).join('');
+}
+function finInner(m){
+    const tags=[];
+    if(m.orgChanged) tags.push('<span class="fin-tag" style="background:#ffe8cc;color:#8a4b08">소속변경</span>');
+    const fn=finalMatchedName(m);
+    if(detectHonorific(fn, m.newName)) tags.push('<span class="fin-tag" style="background:#d0ebff;color:#0b5ed7">호칭</span>');
+    return `<div class="fin-name">${esc(fn)}</div>` + (tags.length?`<div class="mt-1">${tags.join(' ')}</div>`:'');
+}
+function updateFinCell(i){ const el=document.getElementById('fin'+i); if(el) el.innerHTML=finInner(S.matched[i]); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function setChoice(i,v){ S.matched[i].choice=v; updateFinCell(i); }
+function setCustom(i,v){ S.matched[i].custom=v; S.matched[i].choice='custom'; updateFinCell(i); }
+function bulkChoice(v){ const onlyDiff=document.getElementById('onlyDiff').checked; const q=document.getElementById('searchMatched').value.trim();
+    S.matched.forEach(m=>{ if(onlyDiff && m.primaryOld===m.newName) return; if(q && !(m.primaryOld+' '+m.newName).includes(q)) return;
+        if(v==='newhon' && !m.honor){ m.choice='new'; } else m.choice=v; });
+    renderMatched(); }
+function finalMatchedName(m){
+    if(m.choice==='new') return m.newName;
+    if(m.choice==='newhon') return m.withHon;
+    if(m.choice==='old') return m.primaryOld;
+    if(m.choice==='custom') return (m.custom||m.newName).trim();
+    return m.newName;
+}
+function matchedHonor(m){ // 까톡용: 최종 이름에서 신규이름 대비 남은 호칭
+    const fn=finalMatchedName(m); return detectHonorific(fn, m.newName); }
+
+// ===================== Shift 범위 선택 =====================
+let _lastPos={ex:null, per:null};
+function onRangeClick(kind, cb){
+    const shown = kind==='ex'? S._exShown : S._perShown;
+    const key   = kind==='ex'? 'e' : 'p';
+    const pos   = +cb.dataset.pos;
+    const ev = window.event;
+    if(ev && ev.shiftKey && _lastPos[kind]!=null && _lastPos[kind]!==pos){
+        const a=Math.min(_lastPos[kind],pos), b=Math.max(_lastPos[kind],pos);
+        const boxes=document.querySelectorAll(`#${kind}Body input[type=checkbox]`);
+        for(let p=a;p<=b;p++){
+            if(shown[p]) shown[p][key].keep=cb.checked;
+            if(boxes[p]) boxes[p].checked=cb.checked;
+        }
+    } else {
+        shown[pos][key].keep=cb.checked;
+    }
+    _lastPos[kind]=pos;
+    if(kind==='ex') exCountOnly(); else perCountOnly();
+}
+
+// ===================== 렌더: 이전 담당 =====================
+function renderEx(){
+    const q=document.getElementById('searchEx').value.trim();
+    let list=S.ex.map((e,i)=>({e,i}));
+    if(q) list=list.filter(x=>(x.e.name+' '+x.e.group.notes+' '+x.e.group.phoneRaw).includes(q));
+    const shown=list; S._exShown=shown; _lastPos.ex=null;
+    const keep=S.ex.filter(e=>e.keep).length;
+    document.getElementById('exCount').innerText=`총 ${S.ex.length.toLocaleString()}명 · 남김 ${keep.toLocaleString()} / 삭제 ${(S.ex.length-keep).toLocaleString()}`;
+    document.getElementById('exBody').innerHTML=shown.map(({e,i},pos)=>`<tr>
+        <td class="text-center"><input type="checkbox" class="form-check-input" data-pos="${pos}" ${e.keep?'checked':''} onclick="onRangeClick('ex',this)"></td>
+        <td>${esc(e.name)}</td>
+        <td class="mini">${fmtPhone(e.group.phoneRaw)}</td>
+        <td class="mini text-muted">${esc(e.group.notes)}</td></tr>`).join('');
+}
+function exCountOnly(){ const keep=S.ex.filter(e=>e.keep).length; document.getElementById('exCount').innerText=`총 ${S.ex.length.toLocaleString()}명 · 남김 ${keep.toLocaleString()} / 삭제 ${(S.ex.length-keep).toLocaleString()}`; }
+
+// ===================== 렌더: 개인 연락처 =====================
+function perBadge(p){
+    if(p.junk) return '<span class="badge bg-danger-subtle text-danger">스팸 의심</span>';
+    if(p.biz) return '<span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span>';
+    return '<span class="badge bg-primary-subtle text-primary">개인</span>';
+}
+function renderPer(){
+    const q=document.getElementById('searchPer').value.trim();
+    const hideSusp=document.getElementById('hideJunk').checked;
+    let list=S.per.map((p,i)=>({p,i}));
+    if(hideSusp) list=list.filter(x=>!x.p.junk && !x.p.biz);
+    if(q) list=list.filter(x=>(x.p.name+' '+x.p.group.phoneRaw).includes(q));
+    const shown=list; S._perShown=shown; _lastPos.per=null;
+    const keep=S.per.filter(p=>p.keep).length;
+    const nPer=S.per.filter(p=>!p.junk&&!p.biz).length, nBiz=S.per.filter(p=>p.biz).length, nJunk=S.per.filter(p=>p.junk).length;
+    document.getElementById('perCount').innerHTML=`총 ${S.per.length.toLocaleString()}명 · <b class="text-success">남김 ${keep.toLocaleString()}</b> / 삭제 ${(S.per.length-keep).toLocaleString()} &nbsp;|&nbsp; 개인 ${nPer.toLocaleString()} · 업무의심 ${nBiz.toLocaleString()} · 스팸의심 ${nJunk.toLocaleString()}`;
+    document.getElementById('perBody').innerHTML=shown.map(({p,i},pos)=>`<tr>
+        <td class="text-center"><input type="checkbox" class="form-check-input" data-pos="${pos}" ${p.keep?'checked':''} onclick="onRangeClick('per',this)"></td>
+        <td>${esc(p.name)}</td>
+        <td class="mini">${fmtPhone(p.group.phoneRaw)}</td>
+        <td class="text-center">${perBadge(p)}</td></tr>`).join('');
+}
+function perCountOnly(){ const keep=S.per.filter(p=>p.keep).length; document.getElementById('perCount').innerHTML=`총 ${S.per.length.toLocaleString()}명 · <b class="text-success">남김 ${keep.toLocaleString()}</b> / 삭제 ${(S.per.length-keep).toLocaleString()}`; }
+function keepNonJunk(){ S.per.forEach(p=>p.keep=!p.junk && !p.biz); renderPer(); }   // 개인만 남김
+
+// ===================== 일괄 =====================
+function bulkKeep(which,val){
+    if(which==='ex'){ const q=document.getElementById('searchEx').value.trim();
+        S.ex.forEach(e=>{ if(q && !(e.name+' '+e.group.notes+' '+e.group.phoneRaw).includes(q)) return; e.keep=val; }); renderEx(); }
+    else { const q=document.getElementById('searchPer').value.trim(); const hideJunk=document.getElementById('hideJunk').checked;
+        S.per.forEach(p=>{ if(hideJunk&&p.junk) return; if(q && !(p.name+' '+p.group.phoneRaw).includes(q)) return; p.keep=val; }); renderPer(); }
+}
+
+// ===================== 최종 통계 =====================
+function buildFinalStats(){
+    const exKeep=S.ex.filter(e=>e.keep).length, perKeep=S.per.filter(p=>p.keep).length;
+    const total=S.matched.length+exKeep+perKeep+S.brandNew.length;
+    const del=S.ex.length-exKeep + (S.per.length-perKeep);
+    const cards=[
+        {n:total, l:'최종 저장', c:'#198754'},
+        {n:S.matched.length, l:'담당 설계사', c:'#20c997'},
+        {n:S.brandNew.length, l:'신규 담당 추가', c:'#6f42c1'},
+        {n:exKeep, l:'이전담당 남김', c:'#fd7e14'},
+        {n:perKeep, l:'개인 남김', c:'#0d6efd'},
+        {n:del, l:'삭제(제외)', c:'#dc3545'},
+    ];
+    document.getElementById('finalStats').innerHTML=cards.map(c=>
+        `<div class="col-4 col-md-2"><div class="stat-card" style="background:${c.c}"><div class="num">${c.n.toLocaleString()}</div><div class="lbl">${c.l}</div></div></div>`).join('');
+}
+
+// ===================== 내보내기: 구글 CSV =====================
+function blankRow(){ return new Array(S.oldHeader.length).fill(''); }
+function setCol(row,name,val){ const i=S.colIdx[name]; if(i!=null) row[i]=val; }
+function makeRowFromOld(origRow, displayName, label){
+    const row=origRow.slice();
+    // 이름 통일: First Name에 전체 표시명, Middle/Last 비움, File As 동일
+    setCol(row,'First Name',displayName); setCol(row,'Middle Name',''); setCol(row,'Last Name','');
+    if('File As' in S.colIdx) setCol(row,'File As',displayName);
+    // 라벨(그룹) 지정
+    setCol(row,'Labels', label+' ::: * myContacts');
+    return row;
+}
+function makeRowNew(agent, label){
+    const row=blankRow();
+    setCol(row,'First Name',agent.name);
+    if('File As' in S.colIdx) setCol(row,'File As',agent.name);
+    setCol(row,'Notes', agent.id||'');
+    setCol(row,'Labels', label+' ::: * myContacts');
+    if('Phone 1 - Label' in S.colIdx) setCol(row,'Phone 1 - Label','Mobile');
+    setCol(row,'Phone 1 - Value', agent.phone||'');
+    return row;
+}
+function buildFinalRows(){
+    const out=[];
+    S.matched.forEach(m=>{ out.push(makeRowFromOld(m.group.entries[0].row, finalMatchedName(m), '설계사')); });
+    S.brandNew.forEach(a=>{ out.push(makeRowNew(a,'설계사')); });
+    S.ex.forEach(e=>{ if(e.keep) out.push(makeRowFromOld(e.group.entries[0].row, e.name, '이전담당')); });
+    S.per.forEach(p=>{ if(p.keep) out.push(makeRowFromOld(p.group.entries[0].row, p.name||oldDisplayName(p.group.entries[0].row), '개인')); });
+    return out;
+}
+function exportGoogleCSV(){
+    const rows=buildFinalRows();
+    if(!rows.length){ alert('저장할 연락처가 없습니다.'); return; }
+    const lines=[ S.oldHeader.map(csvCell).join(',') ];
+    rows.forEach(r=>lines.push(r.map(csvCell).join(',')));
+    const blob=new Blob([lines.join('\r\n')], {type:'text/csv;charset=utf-8'});  // BOM 없음
+    saveAs(blob, `구글재업로드_${rows.length}건_${stamp()}.csv`);
+}
+
+// ===================== 내보내기: 관리용 엑셀 (HanaList 양식) =====================
+// 최종 저장 대상 전체를 {이름, 전화, 사번/생년월일, 권한구분, 분류}로 반환
+function buildFinalEntries(){
+    const out=[];
+    S.matched.forEach(m=>out.push({name:finalMatchedName(m), phone:m.group.phoneRaw, id:(m.agent.id||m.group.notes||''), role:(m.agent.role||''), cat:'설계사'}));
+    S.brandNew.forEach(a=>out.push({name:a.name, phone:a.phone, id:(a.id||''), role:(a.role||''), cat:'설계사'}));
+    S.ex.forEach(e=>{ if(e.keep) out.push({name:e.name, phone:e.group.phoneRaw, id:(e.group.notes||''), role:'', cat:'이전담당'}); });
+    S.per.forEach(p=>{ if(p.keep) out.push({name:(p.name||''), phone:p.group.phoneRaw, id:(p.group.notes||''), role:'', cat:'개인'}); });
+    return out;
+}
+// 현재 담당만 = 매칭 설계사(호칭 정리된 최종 이름) + 신규 담당. 이전담당·개인은 제외.
+function buildManagedEntries(){
+    const out=[];
+    S.matched.forEach(m=>out.push({name:finalMatchedName(m), phone:m.group.phoneRaw, id:(m.agent.id||m.group.notes||''), role:(m.agent.role||''), cat:'설계사'}));
+    S.brandNew.forEach(a=>out.push({name:a.name, phone:a.phone, id:(a.id||''), role:(a.role||''), cat:'설계사'}));
+    return out;
+}
+// Hana연락처백업 양식과 동일한 4컬럼 + 참고용 '분류' 1컬럼
+function writeExcelBackup(entries, fnamePrefix){
+    if(!entries.length){ alert('저장할 연락처가 없습니다.'); return; }
+    const aoa=[['임시저장이름','연락처','사번/생년월일-코드','권한구분','분류']];
+    entries.forEach(e=>aoa.push([e.name, fmtPhone(e.phone), e.id, e.role, e.cat]));
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:26},{wch:16},{wch:22},{wch:14},{wch:10}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'HanaList');
+    XLSX.writeFile(wb, `${fnamePrefix}_${entries.length}건_${stamp()}.xlsx`);
+}
+function exportExcelBackup(){ writeExcelBackup(buildFinalEntries(), '연락처백업'); }        // ⑥ 최종 전체
+function exportManagedExcel(){ writeExcelBackup(buildManagedEntries(), '담당명단_관리엑셀'); } // ③ 담당만
+
+// ===================== 내보내기: vCard (모바일 저장용) =====================
+function vEsc(s){ return (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;'); }
+function writeVCard(entries, fnamePrefix){
+    if(!entries.length){ alert('저장할 연락처가 없습니다.'); return; }
+    const cards=entries.map(e=>{
+        const nm=vEsc(e.name);
+        const lines=['BEGIN:VCARD','VERSION:3.0','N:;'+nm+';;;','FN:'+nm];
+        if(e.phone) lines.push('TEL;TYPE=CELL:'+e.phone);
+        lines.push('END:VCARD');
+        return lines.join('\r\n');
+    });
+    const text=cards.join('\r\n')+'\r\n';   // CRLF, BOM 없음 (iOS/Android 호환)
+    const blob=new Blob([text], {type:'text/vcard;charset=utf-8'});
+    saveAs(blob, `${fnamePrefix}_${entries.length}건_${stamp()}.vcf`);
+}
+function exportVCard(){ writeVCard(buildFinalEntries(), '연락처'); }              // ⑥ 최종 전체
+function exportManagedVCard(){ writeVCard(buildManagedEntries(), '담당명단_모바일'); } // ③ 담당만
+
+// ⑤ 개인 명단(파일 출력용): '남김'에 체크된 이전담당(=개인 인맥으로 합침) + '남김'에 체크된 개인
+function buildKeptPerEntries(){
+    const out=[];
+    S.ex.forEach(e=>{ if(e.keep) out.push({name:e.name, phone:e.group.phoneRaw, id:(e.group.notes||''), role:'', cat:'이전담당(남김)'}); });
+    S.per.forEach(p=>{ if(p.keep) out.push({name:(p.name||''), phone:p.group.phoneRaw, id:(p.group.notes||''), role:'', cat:'개인'}); });
+    return out;
+}
+function exportPerExcel(){ writeExcelBackup(buildKeptPerEntries(), '개인명단_관리엑셀'); }
+function exportPerVCard(){ writeVCard(buildKeptPerEntries(), '개인명단_모바일'); }
+function exportPerKaTalk(){
+    const names=buildKeptPerEntries().map(e=>e.name).filter(n=>n && n.trim());  // 이름 없는 항목은 까톡 등록 제외
+    if(!names.length){ alert('저장할 개인 인맥(이름 있는 항목)이 없습니다.'); return; }
+    XLSX.writeFile(buildKakaoWorkbook(names), `까톡오토_개인_${names.length}명_${stamp()}.xlsx`);
+}
+
+// ===================== 내보내기: 소속변경 목록 엑셀 =====================
+function exportOrgChanged(){
+    const list=S.matched.filter(m=>m.orgChanged);
+    if(!list.length){ alert('소속변경으로 감지된 연락처가 없습니다.'); return; }
+    const aoa=[['기존 이름 (구글)','신규 이름 (현재)','전화','최종 저장 이름','감지 호칭']];
+    list.forEach(m=>aoa.push([m.primaryOld, m.newName, fmtPhone(m.group.phoneRaw), finalMatchedName(m), (m.honor||'')]));
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:26},{wch:22},{wch:16},{wch:26},{wch:10}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '소속변경');
+    XLSX.writeFile(wb, `소속변경목록_${list.length}건_${stamp()}.xlsx`);
+}
+
+// ===================== 내보내기: 까톡 양식 =====================
+// GGaTalk_친구등록_양식.xlsx 기준 (2026-07 교체): Kakao_List 시트(이름 A열 2행부터) + 참고용 Group_List 시트.
+// ⚠️ Group_List 그룹명은 GGaTalk 양식 파일에서 그대로 가져온 것. 양식이 또 바뀌면 hana.html과 함께 갱신할 것.
+const KAKAO_GROUPS = ['GAK 담당전체','IFA 담당전체','KGA 담당전체','KMI 담당전체','W에셋 담당전체','HK 담당전체','굿리치 담당전체','글로벌 담당전체','프라임 담당전체','에이플 담당전체','더베스트 담당전체','마이금융 담당전체','메가 담당전체','메타리치 담당전체','밸류 담당전체','삼성금융 담당전체','스카이블루 담당전체','신금플 담당전체','아너스 담당전체','엠금융 담당전체','영진 담당전체','원금융 담당전체','유퍼스트 담당전체','인카 담당전체','한보금 담당전체','한화금융서비스 담당전체','한화라이프랩 담당전체','에이플 담당전체 (본채널만)','삼성화재금융서비스','에이플러스 (임시)','싱크임시그룹'];
+function buildKakaoWorkbook(names){
+    // Sheet1 Kakao_List: 헤더 + 이름 A열 2행부터 (호칭입력·그룹1~3은 공란)
+    const aoa=[['이름입력','호칭입력','그룹1','그룹2','그룹3']];
+    names.forEach(nm=>aoa.push([nm,'','','','']));
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:15},{wch:17},{wch:13},{wch:13},{wch:13}];
+    // Sheet2 Group_List: 참고용 그룹명 목록
+    const g=[['그룹 목록 (아래 그룹명을 복사해 그룹1~3 칸에 붙여넣으세요)']];
+    KAKAO_GROUPS.forEach(x=>g.push([x]));
+    const wsG=XLSX.utils.aoa_to_sheet(g); wsG['!cols']=[{wch:45}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kakao_List');
+    XLSX.utils.book_append_sheet(wb, wsG, 'Group_List');
+    return wb;
+}
+function exportKaTalk(){
+    // 현재 담당 = 매칭된 설계사(최종 이름) + 신규 담당. 호칭 분리 없이 전부 '이름입력'에.
+    const names=buildManagedEntries().map(e=>e.name);
+    if(!names.length){ alert('저장할 담당 연락처가 없습니다.'); return; }
+    XLSX.writeFile(buildKakaoWorkbook(names), `까톡오토_친구등록_${names.length}명_${stamp()}.xlsx`);
+}
+
+// ===================== 내보내기: 요약 리포트 =====================
+function exportReport(){
+    const exKeep=S.ex.filter(e=>e.keep), perKeep=S.per.filter(p=>p.keep);
+    const L=[];
+    L.push('=== 구글 연락처 정리 요약 ==='); L.push('생성: '+stamp());
+    L.push('');
+    L.push(`[분류]`);
+    L.push(`  담당 설계사(호칭정리): ${S.matched.length}`);
+    L.push(`  신규 담당 추가: ${S.brandNew.length}`);
+    L.push(`  이전 담당: 총 ${S.ex.length} / 남김 ${exKeep.length} / 삭제 ${S.ex.length-exKeep.length}`);
+    L.push(`  개인 연락처: 총 ${S.per.length} / 남김 ${perKeep.length} / 삭제 ${S.per.length-perKeep.length}`);
+    L.push(`  ── 최종 저장: ${S.matched.length+S.brandNew.length+exKeep.length+perKeep.length}`);
+    L.push('');
+    L.push('[호칭 정리 — 기존 → 최종]');
+    S.matched.forEach(m=>{ const f=finalMatchedName(m); if(f!==m.primaryOld) L.push(`  ${m.primaryOld}  →  ${f}`); });
+    L.push('');
+    L.push('[이전담당 · 남김]'); exKeep.forEach(e=>L.push('  '+e.name+'  '+fmtPhone(e.group.phoneRaw)));
+    L.push(''); L.push('[개인 · 남김]'); perKeep.forEach(p=>L.push('  '+p.name+'  '+fmtPhone(p.group.phoneRaw)));
+    const blob=new Blob(['﻿'+L.join('\r\n')],{type:'text/plain;charset=utf-8'});
+    saveAs(blob, `정리요약_${stamp()}.txt`);
+}
+function stamp(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+
+// ===================== 스텝 이동 =====================
+function enableSteps(){ analyzed=true; document.querySelectorAll('#stepper .step').forEach(s=>s.classList.remove('disabled')); document.getElementById('btnNext').disabled=false; }
+let analyzed=false;
+function goStep(n){
+    if(n<0||n>5) return;
+    if(n>0 && !analyzed) return;               // 분석 전에는 1단계 이후로 못 넘어감
+    cur=n;
+    document.querySelectorAll('.wizard-step').forEach((el,i)=>el.classList.toggle('active',i===n));
+    document.querySelectorAll('#stepper .step').forEach((el,i)=>{ el.classList.toggle('active',i===n); el.classList.toggle('done',i<n); });
+    document.getElementById('stepLabel').innerText=`${n+1} / 6 · ${STEP_LABELS[n]}`;
+    document.getElementById('btnPrev').disabled = (n===0);
+    // 다음 버튼: 마지막(5)이면 비활성 / 0단계는 분석 완료 시에만 활성
+    document.getElementById('btnNext').disabled = (n===5) || (n===0 && !analyzed);
+    if(n===5) buildFinalStats();
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ===================== 검색 디바운스 =====================
+const debounce=(fn,ms=180)=>{ let t; return ()=>{ clearTimeout(t); t=setTimeout(fn,ms); }; };
+const dRenderMatched=debounce(renderMatched), dRenderEx=debounce(renderEx), dRenderPer=debounce(renderPer);
+
+// ===================== 초기화 =====================
+setupDrop('dzOld','fileOld',loadOld);
+setupDrop('dzNew','fileNew',loadNew);
+document.getElementById('btnAnalyze').addEventListener('click',analyze);
+document.querySelectorAll('#stepper .step').forEach(s=>s.addEventListener('click',()=>{ if(!s.classList.contains('disabled')) goStep(+s.dataset.goto); }));
+</script>
+</body>
+</html>
