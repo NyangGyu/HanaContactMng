@@ -78,10 +78,10 @@
 
     <!-- 진행 단계 -->
     <div class="stepper" id="stepper">
-        <div class="step active" data-goto="0"><span class="n">1</span>파일 업로드</div>
-        <div class="step disabled" data-goto="1"><span class="n">2</span>대조 분석</div>
-        <div class="step disabled" data-goto="2"><span class="n">3</span>호칭 정리</div>
-        <div class="step disabled" data-goto="3"><span class="n">4</span>이전 담당</div>
+        <div class="step active" data-goto="0"><span class="n">1</span>파일 올리기</div>
+        <div class="step disabled" data-goto="1"><span class="n">2</span>분류 결과</div>
+        <div class="step disabled" data-goto="2"><span class="n">3</span>담당 이름 정리</div>
+        <div class="step disabled" data-goto="3"><span class="n">4</span>예전 담당 정리</div>
         <div class="step disabled" data-goto="4"><span class="n">5</span>개인 연락처</div>
         <div class="step disabled" data-goto="5"><span class="n">6</span>내보내기</div>
     </div>
@@ -130,10 +130,12 @@
     <!-- ===================== STEP 2: 분석 결과 ===================== -->
     <section class="wizard-step" id="step1">
         <div class="guide">
-            <h6><i class="bi bi-diagram-3-fill"></i> 대조 결과 — 4가지로 분류했습니다</h6>
+            <h6><i class="bi bi-diagram-3-fill"></i> 분류 결과 — 크게 <u>2갈래</u>로 나눴어요</h6>
             <ul>
-                <li><b>전화번호</b>가 같으면 “같은 사람”으로 봅니다. (전화번호가 없으면 <b>사번(G번호)</b>으로 보조 매칭)</li>
-                <li>같은 번호가 여러 번 저장돼 있던 <b>중복</b>은 하나로 합치고, 기존에 붙어있던 이름들을 모두 후보로 보여줍니다.</li>
+                <li>구글 주소록을 <b>📇 업무용(지금 담당)</b> 과 <b>🤝 개인 인맥 후보</b> 로 나눕니다. (아래 카드)</li>
+                <li><b>전화번호</b>가 같으면 “같은 사람”으로 봅니다. (번호가 없으면 <b>사번(G번호)</b>으로 보조 매칭)</li>
+                <li>같은 번호로 여러 번 저장돼 있던 <b>중복</b>은 하나로 합치고, 기존 이름들을 모두 후보로 보여줍니다.</li>
+                <li>다음 단계들은 그냥 <b>[다음]</b>만 눌러도 추천값으로 정리됩니다. 세밀하게 고치고 싶을 때만 손대면 돼요.</li>
             </ul>
         </div>
         <div class="row g-3 mb-4" id="statCards"></div>
@@ -142,9 +144,10 @@
             <div class="card-body">
                 <h6 class="fw-bold"><i class="bi bi-list-check"></i> 다음 단계에서 이렇게 정리합니다</h6>
                 <ol class="mb-0">
-                    <li><b>호칭 정리</b> — 지금도 담당인 설계사. 기존 이름(직급 포함)과 신규 이름을 나란히 보고 <b>어떤 형태로 저장할지 직접 선택</b>합니다.</li>
-                    <li><b>이전 담당</b> — 사번은 있지만 현재 명단엔 없는 사람(해촉·타지역 이동 등). <b>남길 사람만 선택</b>하고 나머지는 삭제합니다.</li>
-                    <li><b>개인 연락처</b> — 사번이 없는 개인/기타 연락처. <b>저장할 사람만 선택</b>합니다. (기관·스팸 의심은 미리 삭제 후보로 표시)</li>
+                    <li><b>3단계 · 담당 이름 정리</b> — 지금도 담당인 설계사. 기존 이름(직급 포함)과 새 이름을 나란히 보고 <b>저장할 이름을 고릅니다</b>. (기본값 이미 추천됨)</li>
+                    <li><b>4단계 · 예전 담당 정리</b> — 사번은 있지만 지금 명단엔 없는 사람(해촉·이동 등). <b>계속 알고 지낼 사람만 남기고</b> 나머지는 삭제.</li>
+                    <li><b>5단계 · 개인 연락처</b> — 사번 없는 개인/기타. <b>저장할 사람만 남깁니다</b>. (기관·스팸 의심은 미리 삭제 후보로 표시)</li>
+                    <li>💡 <b>4·5단계에서 남긴 사람은 합쳐서 “내 개인 인맥”</b>이 됩니다.</li>
                 </ol>
             </div>
         </div>
@@ -152,8 +155,12 @@
 
     <!-- ===================== STEP 3: 호칭 정리 ===================== -->
     <section class="wizard-step" id="step2">
+        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
+            <i class="bi bi-check-circle-fill"></i>
+            <div class="small"><b>이미 추천 이름으로 맞춰뒀어요.</b> 그대로 괜찮으면 아래는 건너뛰고 <b>[다음]</b>만 눌러도 됩니다. 바꿀 사람만 골라 고치세요.</div>
+        </div>
         <div class="guide">
-            <h6><i class="bi bi-person-badge-fill"></i> ① 호칭 정리 — 기존/신규를 보고 직접 선택</h6>
+            <h6><i class="bi bi-person-badge-fill"></i> 3단계 · 지금 담당들 이름 다듬기</h6>
             <ul>
                 <li><b>기존(구글)</b> 이름엔 직급이 붙어있고(<span class="name-old">A+ 강남 김정란 EM</span>), <b>신규(현재 명단)</b>는 깔끔합니다(<span class="name-new">A+ 강남 김정란</span>).</li>
                 <li>소속이 바뀐 경우(<span class="badge badge-org">소속변경</span>)엔 신규 소속이 최신입니다. 행마다 4가지 중 <b>실제 저장할 이름</b>을 고르세요.</li>
@@ -203,8 +210,12 @@
 
     <!-- ===================== STEP 4: 이전 담당 ===================== -->
     <section class="wizard-step" id="step3">
+        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
+            <i class="bi bi-check-circle-fill"></i>
+            <div class="small"><b>기본은 ‘삭제’예요.</b> 개인적으로 계속 연락할 사람만 <b>‘남김’ 체크</b>하세요. 남길 사람이 없으면 그대로 <b>[다음]</b>. (남긴 사람은 <b>내 개인 인맥</b>으로 합쳐집니다)</div>
+        </div>
         <div class="guide">
-            <h6><i class="bi bi-person-dash-fill"></i> ② 이전 담당 정리 — 남길 사람만 체크</h6>
+            <h6><i class="bi bi-person-dash-fill"></i> 4단계 · 예전 담당 중 계속 알고 지낼 사람만 남기기</h6>
             <ul>
                 <li>사번은 있지만 <b>현재 담당 명단엔 없는</b> 사람입니다. 해촉되었거나 다른 지역/담당으로 넘어간 경우가 대부분입니다.</li>
                 <li>기본은 <b>삭제</b>입니다. 개인적으로 계속 연락할 사람만 <b>“남김”에 체크</b>하세요. 체크 안 한 사람은 최종본에서 빠집니다.</li>
@@ -235,15 +246,19 @@
 
     <!-- ===================== STEP 5: 개인 연락처 ===================== -->
     <section class="wizard-step" id="step4">
+        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
+            <i class="bi bi-check-circle-fill"></i>
+            <div class="small"><b>기본은 ‘순수 개인만 남김’이에요.</b> 업무·스팸 의심은 미리 빼뒀으니, 그대로 괜찮으면 <b>[다음]</b>. 더 남기거나 뺄 사람만 체크하세요.</div>
+        </div>
         <div class="guide">
-            <h6><i class="bi bi-person-heart"></i> ③ 개인 연락처 정리 — 저장할 사람만 체크</h6>
+            <h6><i class="bi bi-person-heart"></i> 5단계 · 개인 연락처 정리</h6>
             <ul>
                 <li>사번이 없는 <b>개인·기타 연락처</b>입니다. 가족·지인뿐 아니라 <span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span>(타 GA 설계사 등)·<span class="badge bg-danger-subtle text-danger">스팸 의심</span>도 섞여 있습니다.</li>
                 <li>기본값은 <b>순수 개인만 남김</b>입니다. <span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span>(타 GA 설계사·법인)과 <span class="badge bg-danger-subtle text-danger">스팸 의심</span>은 미리 <b>삭제(체크 해제)</b> 해 두었습니다.</li>
                 <li>업무 연락처 중 계속 남길 사람은 <b>개별 체크</b>하거나, 업무까지 모두 남기려면 <b>[전체 남김]</b>을 누르세요. 기본값으로 되돌리려면 <b>[개인만 남김]</b>.</li>
                 <li><b>“남김”에 체크</b>된 사람만 최종본에 저장됩니다.</li>
                 <li>💡 한 곳을 체크한 뒤 <b>Shift 키를 누른 채</b> 다른 곳을 클릭하면 <b>사이의 항목이 한꺼번에 선택/해제</b>됩니다.</li>
-                <li>아래 <b class="text-primary">[정리된 개인 명단 저장]</b>은 여기서 남긴 개인에 더해 <b>이전 담당(②)에서 남긴 사람들까지 합쳐</b>(=내 개인 인맥 전체) 관리엑셀·vCard·까톡오토로 내려받습니다.</li>
+                <li>아래 <b class="text-primary">[정리된 개인 명단 저장]</b>은 여기서 남긴 개인에 더해 <b>4단계(예전 담당)에서 남긴 사람들까지 합쳐</b>(=내 개인 인맥 전체) 관리엑셀·vCard·까톡오토로 내려받습니다.</li>
             </ul>
         </div>
         <div class="toolbar d-flex flex-wrap gap-2 align-items-center">
@@ -340,7 +355,7 @@ const S = {
     loadedOld: false, loadedNew: false
 };
 let cur = 0;
-const STEP_LABELS = ['파일 업로드','대조 분석','호칭 정리','이전 담당','개인 연락처','내보내기'];
+const STEP_LABELS = ['파일 올리기','분류 결과','담당 이름 정리','예전 담당 정리','개인 연락처','내보내기'];
 
 // ===================== 유틸 =====================
 const spinner = (on, txt) => { const s=document.getElementById('spinner'); if(txt) document.getElementById('spinnerText').innerText=txt; s.style.display = on?'flex':'none'; };
@@ -550,14 +565,26 @@ function analyze(){
 }
 
 function buildStats(){
-    const cards=[
-        {n:S.matched.length, l:'담당 설계사 (호칭 정리)', c:'#198754'},
-        {n:S.ex.length, l:'이전 담당 (사번 있음)', c:'#fd7e14'},
-        {n:S.per.length, l:'개인 연락처 후보', c:'#0d6efd'},
-        {n:S.brandNew.length, l:'신규 담당 (구글에 없음)', c:'#6f42c1'},
-    ];
-    document.getElementById('statCards').innerHTML = cards.map(c=>
-        `<div class="col-6 col-md-3"><div class="stat-card" style="background:${c.c}"><div class="num">${c.n.toLocaleString()}</div><div class="lbl">${c.l}</div></div></div>`).join('');
+    const card=(n,l,c)=>`<div class="col-6 col-md-3"><div class="stat-card" style="background:${c}"><div class="num">${n.toLocaleString()}</div><div class="lbl">${l}</div></div></div>`;
+    // 오늘 재정리한 개념: 크게 '업무용(담당)' 과 '개인 인맥 후보' 2갈래로 묶어서 보여준다.
+    const html = `
+        <div class="col-12">
+            <div class="fw-bold mb-2"><span class="badge" style="background:#198754">📇 업무용 · 지금 담당</span>
+                <span class="text-muted small">일(담당)로 계속 연락할 사람</span></div>
+            <div class="row g-2">
+                ${card(S.matched.length, '담당 설계사 (이름만 다듬으면 됨)', '#198754')}
+                ${card(S.brandNew.length, '새로 담당된 사람 (구글에 아직 없음)', '#6f42c1')}
+            </div>
+        </div>
+        <div class="col-12 mt-2">
+            <div class="fw-bold mb-2"><span class="badge" style="background:#0d6efd">🤝 개인 인맥 후보</span>
+                <span class="text-muted small">담당은 아니지만 아는 사람 · 다음 단계에서 <b>남길지 선택</b></span></div>
+            <div class="row g-2">
+                ${card(S.ex.length, '예전 담당 (사번 있음 · 해촉/이동 등)', '#fd7e14')}
+                ${card(S.per.length, '개인·기타 (사번 없음)', '#0d6efd')}
+            </div>
+        </div>`;
+    document.getElementById('statCards').innerHTML = html;
 }
 
 // ===================== 렌더: 호칭 정리 =====================
