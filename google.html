@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구글 연락처 정리 도우미 v1.2.6</title>
+    <title>구글 연락처 정리 도우미 v1.2.7</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -71,7 +71,7 @@
 
     <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-3">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.6 · 260804</span></h2>
+            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.7 · 260804</span></h2>
             <p class="text-secondary mb-0">이미 저장된 구글 주소록을 <b>현재 담당 명단</b>과 대조하여, 호칭·이전담당·개인 연락처를 정리합니다.</p>
         </div>
     </div>
@@ -253,6 +253,7 @@
                 <li>사번은 있지만 <b>현재 담당 명단엔 없는</b> 사람입니다. 해촉되었거나 다른 지역/담당으로 넘어간 경우가 대부분입니다.</li>
                 <li>기본은 <b>삭제</b>입니다. 개인적으로 계속 연락할 사람만 <b>“남김”에 체크</b>하세요. 체크 안 한 사람은 최종본에서 빠집니다.</li>
                 <li>💡 한 곳을 체크한 뒤 <b>Shift 키를 누른 채</b> 다른 곳을 클릭하면 <b>사이의 항목이 한꺼번에 선택/해제</b>됩니다.</li>
+                <li>아래 <b class="text-primary">[예전 담당 명단 엑셀로 저장]</b>을 누르면 <b>이 목록 전체</b>(남김/삭제 상관없이)를 엑셀로 받습니다. 해촉·조직이동으로 <b>더 이상 담당이 아닌 사람들을 따로 관리</b>할 때 쓰세요.</li>
             </ul>
         </div>
         <div class="toolbar d-flex flex-wrap gap-2 align-items-center">
@@ -262,6 +263,12 @@
             <div class="ms-auto d-flex gap-2 align-items-center">
                 <input type="text" class="form-control form-control-sm" style="width:220px" id="searchEx" placeholder="이름/메모/번호 검색" oninput="dRenderEx()">
             </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center p-2 mb-2 rounded" style="background:#fff4e6;border:1px solid #ffd8a8">
+            <span class="fw-bold" style="color:#c2410c"><i class="bi bi-download"></i> 예전 담당 명단 저장
+                <span class="mini text-muted fw-normal">(해촉·조직이동 등 담당에서 빠진 사람 — 남김/삭제 관계없이 <b>전원</b>)</span> :</span>
+            <button class="btn btn-sm btn-warning fw-bold text-dark" onclick="exportExList()"><i class="bi bi-file-earmark-excel"></i> 엑셀로 저장</button>
+            <span class="mini text-muted"><i class="bi bi-info-circle"></i> 이름·연락처·사번·처리(남김/삭제)가 들어갑니다.</span>
         </div>
         <div class="mini mb-2" id="exCount"></div>
         <div class="table-scroll">
@@ -1042,6 +1049,40 @@ function writeExcelBackup(entries, fnamePrefix){
 }
 function exportExcelBackup(){ writeExcelBackup(buildFinalEntries(), '연락처백업'); }        // ⑥ 최종 전체
 function exportManagedExcel(){ writeExcelBackup(buildManagedEntries(), '담당명단_관리엑셀'); } // ③ 담당만
+
+// ===================== 내보내기: 예전 담당 명단 엑셀 (4단계) =====================
+// 해촉·조직이동 등으로 담당에서 빠진 사람을 따로 관리하기 위한 기록용.
+// ⚠️ 최종본 저장(남김/삭제)과는 별개다 — '삭제'로 둔 사람이야말로 이 명단의 핵심이므로 **전원**을 담고
+//    처리 여부는 컬럼으로 구분한다.
+function exportExList(){
+    if(!S.ex.length){
+        alert('예전 담당으로 분류된 사람이 없습니다.\n\n'
+            + '구글 주소록 메모에 사번(G번호)이 있어야 "예전 담당"으로 골라낼 수 있습니다.\n'
+            + '메모가 비어 있으면 담당이 아닌 사람은 모두 5단계(개인)로 갑니다.');
+        return;
+    }
+    const aoa=[['이름 (구글 저장명)','연락처','보조 연락처','사번','사번/생년월일 메모','처리']];
+    // 이름순 정렬 — 관리 문서라 찾아보기 쉽게
+    const list=S.ex.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+    list.forEach(e=>{
+        const g=e.group;
+        const phones=orderPhones(g.phones, g.phoneRaw);
+        const subs=phones.filter(p=>normPhone(p.num)!==normPhone(g.phoneRaw));
+        aoa.push([
+            e.name||'',
+            fmtPhone(g.phoneRaw),
+            subs.map(p=>fmtPhone(p.num)).join(', '),
+            g.gnum||'',
+            g.notes||'',
+            e.keep? '남김 (개인 인맥으로 유지)' : '삭제 (주소록에서 제외)'
+        ]);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:28},{wch:16},{wch:18},{wch:12},{wch:26},{wch:22}];
+    ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:5}})};
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '예전담당');
+    XLSX.writeFile(wb, `예전담당명단_${list.length}명_${stamp()}.xlsx`);
+}
 
 // ===================== 내보내기: vCard (모바일 저장용) =====================
 function vEsc(s){ return (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;'); }
