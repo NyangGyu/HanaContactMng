@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구글 연락처 정리 도우미 v1.2.4</title>
+    <title>구글 연락처 정리 도우미 v1.2.6</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -71,7 +71,7 @@
 
     <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-3">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.4 · 260803</span></h2>
+            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.6 · 260804</span></h2>
             <p class="text-secondary mb-0">이미 저장된 구글 주소록을 <b>현재 담당 명단</b>과 대조하여, 호칭·이전담당·개인 연락처를 정리합니다.</p>
         </div>
     </div>
@@ -281,14 +281,15 @@
     <section class="wizard-step" id="step4">
         <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
             <i class="bi bi-check-circle-fill"></i>
-            <div class="small"><b>기본은 ‘순수 개인만 남김’이에요.</b> 업무·스팸 의심은 미리 빼뒀으니, 그대로 괜찮으면 <b>[다음]</b>. 더 남기거나 뺄 사람만 체크하세요.</div>
+            <div class="small"><b>기본은 ‘거의 다 남김’이에요.</b> 스팸·ARS로 확실한 것만 빼뒀습니다. 그대로 괜찮으면 <b>[다음]</b> — <b class="text-success">그냥 넘어가도 연락처가 사라지지 않습니다.</b></div>
         </div>
         <div class="guide">
             <h6><i class="bi bi-person-heart"></i> 5단계 · 개인 연락처 정리</h6>
             <ul>
                 <li>사번이 없는 <b>개인·기타 연락처</b>입니다. 가족·지인뿐 아니라 <span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span>(타 GA 설계사 등)·<span class="badge bg-danger-subtle text-danger">스팸 의심</span>도 섞여 있습니다.</li>
-                <li>기본값은 <b>순수 개인만 남김</b>입니다. <span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span>(타 GA 설계사·법인)과 <span class="badge bg-danger-subtle text-danger">스팸 의심</span>은 미리 <b>삭제(체크 해제)</b> 해 두었습니다.</li>
-                <li>업무 연락처 중 계속 남길 사람은 <b>개별 체크</b>하거나, 업무까지 모두 남기려면 <b>[전체 남김]</b>을 누르세요. 기본값으로 되돌리려면 <b>[개인만 남김]</b>.</li>
+                <li><b>기본값은 “스팸·ARS만 빼고 전부 남김”입니다.</b> <span class="badge bg-warning-subtle text-warning-emphasis">업무 의심</span> 표시는 <u>참고용</u>일 뿐, 기본적으로는 <b>남깁니다</b> — 이름이 세 덩어리 이상이면(<code>A+ 강남 홍길동</code>) 업무로 표시되기 때문에, 멀쩡한 지인까지 지워지는 것을 막기 위해서입니다.</li>
+                <li>주소록을 <b>확 줄이고 싶다면</b> <b>[업무의심·스팸 모두 제외]</b>를 누르세요. 되돌리려면 <b>[스팸만 제외]</b>(기본값)나 <b>[전체 남김]</b>.</li>
+                <li class="text-danger"><b>지운 사람은 최종본에 들어가지 않습니다.</b> 체크를 풀기 전에 이름을 한 번 확인하세요.</li>
                 <li><b>“남김”에 체크</b>된 사람만 최종본에 저장됩니다.</li>
                 <li>💡 한 곳을 체크한 뒤 <b>Shift 키를 누른 채</b> 다른 곳을 클릭하면 <b>사이의 항목이 한꺼번에 선택/해제</b>됩니다.</li>
                 <li>아래 <b class="text-primary">[정리된 개인 명단 저장]</b>은 여기서 남긴 개인에 더해 <b>4단계(예전 담당)에서 남긴 사람들까지 합쳐</b>(=내 개인 인맥 전체) 관리엑셀·vCard·까톡오토로 내려받습니다.</li>
@@ -298,7 +299,8 @@
             <span class="fw-bold me-1">일괄 :</span>
             <button class="btn btn-sm btn-outline-success" onclick="bulkKeep('per',true)">전체 남김</button>
             <button class="btn btn-sm btn-outline-danger" onclick="bulkKeep('per',false)">전체 삭제</button>
-            <button class="btn btn-sm btn-primary" onclick="keepNonJunk()"><i class="bi bi-person-check"></i> 개인만 남김 (업무·스팸 삭제)</button>
+            <button class="btn btn-sm btn-primary" onclick="keepNonJunk()" title="기본값으로 되돌립니다"><i class="bi bi-shield-check"></i> 스팸만 제외 <span class="mini">(기본값)</span></button>
+            <button class="btn btn-sm btn-outline-primary" onclick="keepPersonalOnly()" title="주소록을 확 줄이고 싶을 때"><i class="bi bi-person-check"></i> 업무의심·스팸 모두 제외</button>
             <div class="ms-auto d-flex gap-2 align-items-center">
                 <div class="form-check form-switch mb-0">
                     <input class="form-check-input" type="checkbox" id="hideJunk" onchange="renderPer()">
@@ -465,14 +467,50 @@ function setupDrop(dzId, inputId, handler){
     inp.addEventListener('change',e=>{ if(e.target.files[0]) handler(e.target.files[0], dz); });
 }
 
+// 잘못된 파일을 조용히 받아들이면 쓰레기 결과가 끝까지 흘러간다. 여기서 확실히 막고, 무엇을 올려야 하는지 알려준다.
 function loadOld(file, dz){
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(ext!=='csv'){
+        alert('①번 칸에는 구글 주소록 백업 파일(.csv)만 올릴 수 있습니다.\n\n'
+            + '올리신 파일: ' + file.name + '\n\n'
+            + '▶ 받는 곳: PC 웹브라우저에서 contacts.google.com 접속\n'
+            + '   → 왼쪽 메뉴 [내보내기] → 형식 [Google CSV] 선택 → 내보내기\n'
+            + '   → 받은 contacts.csv 파일을 그대로 올려주세요.\n\n'
+            + '※ 받은 파일을 엑셀로 열어서 저장하면 안 됩니다(한글이 깨집니다).');
+        return;
+    }
     const r=new FileReader();
+    r.onerror=()=>alert('파일을 읽지 못했습니다. 파일이 열려 있거나 손상되지 않았는지 확인해 주세요.');
     r.onload=e=>{
-        const rows=parseCSV(e.target.result);
-        if(!rows.length){ alert('CSV를 읽지 못했습니다.'); return; }
+        const text=e.target.result;
+        // 한글 깨짐(인코딩) 감지 — 엑셀로 열었다 저장하면 UTF-8이 아니게 되어 이름이 전부 깨진다.
+        const broken=(text.match(/�/g)||[]).length;
+        if(broken>5){
+            alert('한글이 깨진 파일입니다. (깨진 글자 ' + broken.toLocaleString() + '개)\n\n'
+                + '구글에서 받은 CSV를 엑셀로 열었다가 저장하면 이렇게 됩니다.\n'
+                + '엑셀로 저장한 파일은 쓸 수 없습니다.\n\n'
+                + '▶ contacts.google.com 에서 [내보내기 → Google CSV]로 다시 받아,\n'
+                + '   열어보지 말고 그대로 올려주세요.');
+            return;
+        }
+        const rows=parseCSV(text);
+        if(rows.length<2){ alert('내용이 없는 파일입니다. 구글에서 내보낸 contacts.csv 가 맞는지 확인해 주세요.'); return; }
+        const header=rows[0].map(h=>String(h||'').trim());
+        // 구글 주소록 CSV인지 확인 — 이름/전화 컬럼이 없으면 다른 종류의 CSV다.
+        const hasName = header.includes('First Name') || header.includes('File As') || header.includes('Name');
+        const hasPhone = header.some(h=>/^Phone \d+ - Value$/.test(h));
+        if(!hasName || !hasPhone){
+            alert('구글 주소록 CSV 형식이 아닙니다.\n\n'
+                + '이 파일의 첫 줄: ' + header.slice(0,5).join(', ') + ' …\n\n'
+                + '필요한 항목(First Name, Phone 1 - Value)이 없습니다.\n\n'
+                + '▶ contacts.google.com → [내보내기] → 형식은 반드시 [Google CSV]\n'
+                + '   (Outlook CSV / vCard 형식은 쓸 수 없습니다)');
+            return;
+        }
         S.oldHeader=rows[0];
         S.colIdx={}; S.oldHeader.forEach((h,i)=>S.colIdx[h.trim()]=i);
         S.oldRows=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()!==''));
+        if(!S.oldRows.length){ alert('연락처가 한 건도 없는 파일입니다.'); return; }
         S.loadedOld=true;
         document.getElementById('dzOldInfo').innerText=`✔ ${S.oldRows.length.toLocaleString()}건 로드됨`;
         dz.classList.add('loaded');
@@ -500,16 +538,36 @@ function loadNew(file, dz){
     }
     {
         const r=new FileReader();
+        r.onerror=()=>alert('파일을 읽지 못했습니다. 엑셀에서 파일을 닫은 뒤 다시 시도해 주세요.');
         r.onload=e=>{
-            const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-            const ws=wb.Sheets[wb.SheetNames[0]];
-            const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+            let aoa;
+            try{
+                const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+                const ws=wb.Sheets[wb.SheetNames[0]];
+                aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+            }catch(err){
+                alert('엑셀 파일을 여는 데 실패했습니다.\n\n파일이 손상되었거나 엑셀 파일이 아닐 수 있습니다.\n\n(상세: '+(err&&err.message||err)+')');
+                return;
+            }
+            if(!aoa || aoa.length<2){ alert('내용이 없는 엑셀입니다. 담당 명단이 맞는지 확인해 주세요.'); return; }
+            // 양식 확인 — 다른 엑셀(까톡 양식·전산 원본 등)을 올리면 이름/번호가 엉뚱한 칸에서 읽혀 조용히 망가진다.
+            const h=(aoa[0]||[]).map(c=>String(c||'').trim());
+            if(h[0]!=='임시저장이름' || h[1]!=='연락처'){
+                alert('담당 명단 양식이 아닙니다.\n\n'
+                    + '이 파일의 첫 줄: ' + (h.slice(0,4).join(', ')||'(비어 있음)') + '\n'
+                    + '필요한 형태 : 임시저장이름, 연락처, 사번/생년월일, 권한구분\n\n'
+                    + '▶ Hana 연락처 정리 도우미 → 오른쪽 위 [현재 작업 백업 (엑셀)] 버튼으로 받은\n'
+                    + '   Hana연락처백업_*.xlsx 를 올려주세요.\n'
+                    + '   (이 화면에서 저장한 담당명단_관리엑셀_*.xlsx 도 사용 가능합니다)');
+                return;
+            }
             S.newAgents=[];
             for(let i=1;i<aoa.length;i++){ const row=aoa[i]; if(!row||!row[0]) continue;
                 const name=String(row[0]).trim(), phone=String(row[1]||'').trim(), id=String(row[2]||'').trim(), role=String(row[3]||'').trim();
                 if(!name&&!phone) continue;
                 S.newAgents.push({name, phone, phoneKey:normPhone(phone), id, gnum:gnumOf(id), role});
             }
+            if(!S.newAgents.length){ alert('명단에서 읽어낸 사람이 없습니다. 파일 내용을 확인해 주세요.'); return; }
             afterNew(dz);
         };
         r.readAsArrayBuffer(file);
@@ -567,11 +625,50 @@ function oldDisplayName(row){
     if(!nm) nm=getCol(row,'File As').trim();
     return nm;
 }
-function oldPhone(row){
-    for(const k of ['Phone 1 - Value','Phone 2 - Value','Phone 3 - Value','Phone 4 - Value']){
-        const v=getCol(row,k); if(v&&v.trim()) return v.split(':::')[0].trim();
+// --- 전화번호: 한 사람이 휴대폰 + 내선을 함께 저장해 둔 경우가 많다. 전부 수집해서 들고 다닌다. ---
+// 구글 CSV는 번호를 두 가지로 표현한다: ① Phone 1~4 컬럼으로 나눠 담기 ② 한 칸에 ` ::: ` 로 여러 개.
+// 둘 다 처리하고, 라벨(Mobile/Work…)도 같은 순서로 짝지어 가져온다.
+function rowPhones(row){
+    const out=[];
+    for(let i=1;i<=4;i++){
+        const vals=String(getCol(row,`Phone ${i} - Value`)||'').split(':::');
+        const labs=String(getCol(row,`Phone ${i} - Label`)||'').split(':::');
+        vals.forEach((v,j)=>{
+            const num=v.trim(); if(!num) return;
+            const d=normPhone(num); if(!d) return;
+            if(out.some(p=>normPhone(p.num)===d)) return;          // 같은 번호 중복 제거
+            out.push({num, label:String(labs[j]||labs[0]||'').trim()});
+        });
     }
-    return '';
+    return out;
+}
+// 휴대폰 판정 — ⚠️ 반드시 "번호 패턴"으로 판단한다. 라벨은 믿을 수 없다.
+//   실제 구글 주소록을 보면 1588-0100·02-3709-7235 같은 유선번호에도 라벨이 죄다 `Mobile` 로 붙어 있다.
+//   (실측 3,916건 전부 라벨 Mobile). 라벨을 먼저 보면 유선이 휴대폰으로 둔갑해
+//   ① vCard에서 유선이 TYPE=CELL 로 나가고 ② 유선이 대표번호로 뽑혀 담당 매칭이 실패한다.
+function isMobileNumber(num){ const d=normPhone(num); return /^01[016789]/.test(d) || /^821[016789]/.test(d); }
+function isMobilePhone(p){ return isMobileNumber(p&&p.num); }
+// 대표번호 = ① 번호가 휴대폰인 것 → ② (휴대폰이 없으면) 라벨이 휴대폰인 것 → ③ 저장된 순서상 첫 번호.
+// ⚠️ 이 값이 담당 명단과 대조하는 매칭 키가 된다. 명단은 휴대폰 기준이라 휴대폰을 앞세운다.
+function pickPrimaryPhone(list){
+    const L=list||[];
+    return L.find(p=>isMobileNumber(p.num))
+        || L.find(p=>/mobile|cell|휴대/i.test(p.label||''))
+        || L[0] || null;
+}
+function oldPhone(row){ const p=pickPrimaryPhone(rowPhones(row)); return p? p.num : ''; }
+// 대표번호를 맨 앞에 두고 나머지를 뒤에 붙인 번호 목록 (vCard TEL 순서 = 이 순서)
+function orderPhones(list, primaryRaw){
+    const d=normPhone(primaryRaw), arr=(list||[]).slice();
+    const i=arr.findIndex(p=>normPhone(p.num)===d);
+    if(i>0) arr.unshift(arr.splice(i,1)[0]);
+    else if(i<0 && primaryRaw) arr.unshift({num:primaryRaw, label:''});
+    return arr;
+}
+// 명단(현재 담당)의 번호가 구글쪽 목록에 없으면 보조로 덧붙인다 — 명단 번호가 최신일 수 있어 버리지 않는다.
+function withAgentPhone(list, agentPhone){
+    const d=normPhone(agentPhone); if(!d) return list;
+    return list.some(p=>normPhone(p.num)===d) ? list : list.concat([{num:agentPhone, label:'Mobile'}]);
 }
 
 function analyze(){
@@ -585,26 +682,47 @@ function analyze(){
         const groups=new Map();  // phoneKey -> group
         const noPhone=[];
         S.oldRows.forEach(row=>{
-            const phRaw=oldPhone(row), pk=normPhone(phRaw);
+            const plist=rowPhones(row);
+            const prim=pickPrimaryPhone(plist);
+            const phRaw=prim? prim.num : '', pk=normPhone(phRaw);
             const nm=oldDisplayName(row), notes=getCol(row,'Notes'), labels=getCol(row,'Labels');
             const gnum=gnumOf(notes)||gnumOf(nm);
-            const entry={row, name:nm, phoneRaw:phRaw, notes, labels, gnum};
-            if(!pk){ noPhone.push({key:'', names:[nm], entries:[entry], phoneRaw:phRaw, notes, gnum}); return; }
-            if(!groups.has(pk)) groups.set(pk,{key:pk, names:[], entries:[], phoneRaw:phRaw, notes:'', gnum:''});
+            const entry={row, name:nm, phoneRaw:phRaw, phones:plist, notes, labels, gnum};
+            if(!pk){ noPhone.push({key:'', names:[nm], entries:[entry], phoneRaw:phRaw, phones:plist, notes, gnum}); return; }
+            if(!groups.has(pk)) groups.set(pk,{key:pk, names:[], entries:[], phoneRaw:phRaw, phones:[], notes:'', gnum:''});
             const g=groups.get(pk);
             if(nm && !g.names.includes(nm)) g.names.push(nm);
             g.entries.push(entry);
+            // 같은 번호로 묶인 여러 행의 번호를 전부 모은다(중복 제거) — 내선 등 보조번호가 여기 쌓인다
+            plist.forEach(p=>{ const d=normPhone(p.num); if(d && !g.phones.some(x=>normPhone(x.num)===d)) g.phones.push(p); });
             if(notes && !g.notes) g.notes=notes;
             if(gnum && !g.gnum) g.gnum=gnum;
         });
         S.oldGroups=[...groups.values(), ...noPhone];
 
-        // 분류
+        // 분류 — 2패스.
+        //  1차: 대표번호(휴대폰 우선) → 사번 순으로 매칭 (기존 로직 그대로)
+        //  2차: 1차에서 못 찾은 그룹만, 그룹이 들고 있는 나머지 번호(내선·예전 휴대폰 등)로 재시도.
+        //       이미 1차에서 매칭된 담당자는 건너뛴다(한 사람이 두 번 출력되는 것 방지).
         S.matched=[]; S.ex=[]; S.per=[];
         const matchedAgentKeys=new Set();
-        S.oldGroups.forEach(g=>{
-            const agent = (g.key&&newByPhone.get(g.key)) || (g.gnum&&newByGnum.get(g.gnum)) || null;
+        const usedAgents=new Set();
+        const pending=[];
+        const takeAgent=(g)=>{
+            let agent=(g.key&&newByPhone.get(g.key)) || (g.gnum&&newByGnum.get(g.gnum)) || null;
+            if(agent) return agent;
+            return null;
+        };
+        const takeAgentBySubPhone=(g)=>{
+            for(const p of (g.phones||[])){
+                const a=newByPhone.get(normPhone(p.num));
+                if(a && !usedAgents.has(a)) return a;
+            }
+            return null;
+        };
+        const classify=(g, agent)=>{
             if(agent){
+                usedAgents.add(agent);
                 if(agent.phoneKey) matchedAgentKeys.add(agent.phoneKey);
                 if(agent.gnum) matchedAgentKeys.add('G:'+agent.gnum);
                 const newName=agent.name;
@@ -625,9 +743,18 @@ function analyze(){
                 S.ex.push({group:g, name:g.names[0]||'', keep:false});
             } else {
                 const nm=g.names[0]||'', junk=isJunk(nm, g.phoneRaw), biz=!junk && isBusiness(nm);
-                S.per.push({group:g, name:nm, junk, biz, keep:!junk && !biz});   // 기본: 순수 개인만 유지 (업무·스팸 삭제)
+                // 기본값 = 스팸/ARS만 삭제, 나머지는 전부 남김.
+                // ⚠️ 예전엔 `!junk && !biz`(업무의심도 기본 삭제)였는데, isBusiness는 "3토큰 이상"만 돼도 업무로 보기 때문에
+                //    `A+ 강남 홍길동` 같은 멀쩡한 사람이 전부 걸려 실측 3,916명 중 3,873명이 기본 삭제 대상이 됐다.
+                //    안내문은 "그냥 [다음] 눌러도 됨"인데 그대로 넘기면 인맥이 통째로 날아가므로 기본을 '남김'으로 뒤집었다.
+                //    줄이고 싶은 사람은 [업무의심·스팸 모두 제외] 버튼을 직접 누른다.
+                S.per.push({group:g, name:nm, junk, biz, keep:!junk});
             }
-        });
+        };
+        S.oldGroups.forEach(g=>{ const a=takeAgent(g); if(a) classify(g,a); else pending.push(g); });
+        let subHit=0;
+        pending.forEach(g=>{ const a=takeAgentBySubPhone(g); if(a) subHit++; classify(g,a); });
+        S.subPhoneMatched=subHit;   // 보조번호로 구제된 건수 (분석 결과 화면에 표기)
 
         // 신규 담당 중 구글에 아예 없던 사람
         S.brandNew=S.newAgents.filter(a=>{
@@ -663,7 +790,15 @@ function buildStats(){
                 ${card(S.per.length, '개인·기타 (사번 없음)', '#0d6efd')}
             </div>
         </div>`;
-    document.getElementById('statCards').innerHTML = html;
+    // 번호를 2개 이상 저장해 둔 사람 / 보조번호 덕에 담당으로 잡힌 사람 안내
+    const multi=S.oldGroups.filter(g=>(g.phones||[]).length>=2).length;
+    let extra='';
+    if(multi) extra+=`<div class="col-12 mt-2"><div class="alert alert-light border mb-0 py-2 mini">`
+        +`<i class="bi bi-telephone-plus text-primary"></i> 번호를 <b>2개 이상</b> 저장해 두신 분 <b>${multi.toLocaleString()}명</b>`
+        +`(휴대폰 + 내선 등) — 저장할 때 <b>번호를 전부</b> 담습니다. 대표번호는 휴대폰을 우선으로 잡습니다.`
+        +(S.subPhoneMatched? ` 그중 <b class="text-success">${S.subPhoneMatched.toLocaleString()}명</b>은 보조번호로 대조해서 담당으로 찾아냈습니다.` : '')
+        +`</div></div>`;
+    document.getElementById('statCards').innerHTML = html + extra;
 }
 
 // ===================== 렌더: 호칭 정리 =====================
@@ -685,7 +820,7 @@ function renderMatched(){
         const honBadge = m.honor ? ` <span class="badge badge-hon">${m.honor}</span>` : '';
         const r=(val,label,disabled)=>`<label><input type="radio" name="mc${i}" value="${val}" ${m.choice===val?'checked':''} onchange="setChoice(${i},'${val}')" ${disabled?'disabled':''}> ${label}</label>`;
         return `<tr>
-            <td><span class="name-old">${esc(m.primaryOld)}</span>${orgBadge}${honBadge}${multi}<div class="mini text-muted">${fmtPhone(m.group.phoneRaw)}</div></td>
+            <td><span class="name-old">${esc(m.primaryOld)}</span>${orgBadge}${honBadge}${multi}<div class="mini text-muted">${phoneCell(m.group)}</div></td>
             <td><span class="name-new">${esc(m.newName)}</span></td>
             <td class="choice-cell">
                 ${r('new','신규 그대로 · <b>'+esc(m.newName)+'</b>')}
@@ -696,6 +831,14 @@ function renderMatched(){
             </td>
             <td class="fin-cell"><div id="fin${i}">${finInner(m)}</div></td></tr>`;
     }).join('');
+}
+// 목록에 보조번호(내선 등)를 같이 보여준다 — 저장 전에 "번호 2개짜리"임을 알 수 있게
+function phoneCell(g){
+    const subs=(g.phones||[]).filter(p=>normPhone(p.num)!==normPhone(g.phoneRaw));
+    let s=fmtPhone(g.phoneRaw);
+    if(subs.length) s+=`<div class="text-primary" style="font-size:.78rem;" title="보조 번호도 함께 저장됩니다">`
+        + subs.map(p=>`<i class="bi bi-telephone"></i> ${fmtPhone(p.num)}`).join(' ') + `</div>`;
+    return s;
 }
 function finInner(m){
     const tags=[];
@@ -754,7 +897,7 @@ function renderEx(){
     document.getElementById('exBody').innerHTML=shown.map(({e,i},pos)=>`<tr>
         <td class="text-center"><input type="checkbox" class="form-check-input" data-pos="${pos}" ${e.keep?'checked':''} onclick="onRangeClick('ex',this)"></td>
         <td>${esc(e.name)}</td>
-        <td class="mini">${fmtPhone(e.group.phoneRaw)}</td>
+        <td class="mini">${phoneCell(e.group)}</td>
         <td class="mini text-muted">${esc(e.group.notes)}</td></tr>`).join('');
 }
 function exCountOnly(){ const keep=S.ex.filter(e=>e.keep).length; document.getElementById('exCount').innerText=`총 ${S.ex.length.toLocaleString()}명 · 남김 ${keep.toLocaleString()} / 삭제 ${(S.ex.length-keep).toLocaleString()}`; }
@@ -778,11 +921,12 @@ function renderPer(){
     document.getElementById('perBody').innerHTML=shown.map(({p,i},pos)=>`<tr>
         <td class="text-center"><input type="checkbox" class="form-check-input" data-pos="${pos}" ${p.keep?'checked':''} onclick="onRangeClick('per',this)"></td>
         <td>${esc(p.name)}</td>
-        <td class="mini">${fmtPhone(p.group.phoneRaw)}</td>
+        <td class="mini">${phoneCell(p.group)}</td>
         <td class="text-center">${perBadge(p)}</td></tr>`).join('');
 }
 function perCountOnly(){ const keep=S.per.filter(p=>p.keep).length; document.getElementById('perCount').innerHTML=`총 ${S.per.length.toLocaleString()}명 · <b class="text-success">남김 ${keep.toLocaleString()}</b> / 삭제 ${(S.per.length-keep).toLocaleString()}`; }
-function keepNonJunk(){ S.per.forEach(p=>p.keep=!p.junk && !p.biz); renderPer(); }   // 개인만 남김
+function keepNonJunk(){ S.per.forEach(p=>p.keep=!p.junk); renderPer(); }              // 기본값: 스팸/ARS만 제외
+function keepPersonalOnly(){ S.per.forEach(p=>p.keep=!p.junk && !p.biz); renderPer(); } // 업무의심까지 제외(주소록 확 줄이기)
 
 // ===================== 일괄 =====================
 function bulkKeep(which,val){
@@ -852,29 +996,47 @@ function exportGoogleCSV(){
 }
 
 // ===================== 내보내기: 관리용 엑셀 (HanaList 양식) =====================
-// 최종 저장 대상 전체를 {이름, 전화, 사번/생년월일, 권한구분, 분류}로 반환
+// 각 엔트리는 대표번호(phone) 외에 그 사람의 번호 전체(phones: 대표 먼저, 그 뒤 보조)를 함께 들고 다닌다.
+// 휴대폰 + 내선을 같이 저장해 둔 사람의 보조번호가 여기서 유실되면 vCard·엑셀에서 영영 사라진다.
+const matchedEntry = m => ({
+    name:finalMatchedName(m), phone:m.group.phoneRaw, id:(m.agent.id||m.group.notes||''),
+    role:(m.agent.role||''), cat:'설계사',
+    phones:withAgentPhone(orderPhones(m.group.phones, m.group.phoneRaw), m.agent.phone)
+});
+const agentEntry = a => ({ name:a.name, phone:a.phone, id:(a.id||''), role:(a.role||''), cat:'설계사',
+    phones:(a.phone?[{num:a.phone, label:'Mobile'}]:[]) });
+const groupEntry = (name, g, cat) => ({ name:name||'', phone:g.phoneRaw, id:(g.notes||''), role:'', cat,
+    phones:orderPhones(g.phones, g.phoneRaw) });
+
 function buildFinalEntries(){
     const out=[];
-    S.matched.forEach(m=>out.push({name:finalMatchedName(m), phone:m.group.phoneRaw, id:(m.agent.id||m.group.notes||''), role:(m.agent.role||''), cat:'설계사'}));
-    S.brandNew.forEach(a=>out.push({name:a.name, phone:a.phone, id:(a.id||''), role:(a.role||''), cat:'설계사'}));
-    S.ex.forEach(e=>{ if(e.keep) out.push({name:e.name, phone:e.group.phoneRaw, id:(e.group.notes||''), role:'', cat:'이전담당'}); });
-    S.per.forEach(p=>{ if(p.keep) out.push({name:(p.name||''), phone:p.group.phoneRaw, id:(p.group.notes||''), role:'', cat:'개인'}); });
+    S.matched.forEach(m=>out.push(matchedEntry(m)));
+    S.brandNew.forEach(a=>out.push(agentEntry(a)));
+    S.ex.forEach(e=>{ if(e.keep) out.push(groupEntry(e.name, e.group, '이전담당')); });
+    S.per.forEach(p=>{ if(p.keep) out.push(groupEntry(p.name, p.group, '개인')); });
     return out;
 }
 // 현재 담당만 = 매칭 설계사(호칭 정리된 최종 이름) + 신규 담당. 이전담당·개인은 제외.
 function buildManagedEntries(){
     const out=[];
-    S.matched.forEach(m=>out.push({name:finalMatchedName(m), phone:m.group.phoneRaw, id:(m.agent.id||m.group.notes||''), role:(m.agent.role||''), cat:'설계사'}));
-    S.brandNew.forEach(a=>out.push({name:a.name, phone:a.phone, id:(a.id||''), role:(a.role||''), cat:'설계사'}));
+    S.matched.forEach(m=>out.push(matchedEntry(m)));
+    S.brandNew.forEach(a=>out.push(agentEntry(a)));
     return out;
 }
-// Hana연락처백업 양식과 동일한 4컬럼 + 참고용 '분류' 1컬럼
+// 대표번호를 뺀 나머지(내선 등). 엑셀 '보조 연락처' 칸과 vCard 2번째 이후 TEL 줄에 쓰인다.
+function subPhonesOf(e){
+    const d=normPhone(e.phone);
+    return (e.phones||[]).filter(p=>normPhone(p.num)!==d);
+}
+// Hana연락처백업 양식과 동일한 4컬럼 + 참고용 '분류'·'보조 연락처'
+// ⚠️ Hana 도구(worker.js)는 앞 4컬럼만 읽으므로 뒤에 열을 더해도 되돌려 넣는 데 문제 없다.
 function writeExcelBackup(entries, fnamePrefix){
     if(!entries.length){ alert('저장할 연락처가 없습니다.'); return; }
-    const aoa=[['임시저장이름','연락처','사번/생년월일-코드','권한구분','분류']];
-    entries.forEach(e=>aoa.push([e.name, fmtPhone(e.phone), e.id, e.role, e.cat]));
+    const aoa=[['임시저장이름','연락처','사번/생년월일-코드','권한구분','분류','보조 연락처']];
+    entries.forEach(e=>aoa.push([e.name, fmtPhone(e.phone), e.id, e.role, e.cat,
+        subPhonesOf(e).map(p=>fmtPhone(p.num)).join(', ')]));
     const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols']=[{wch:26},{wch:16},{wch:22},{wch:14},{wch:10}];
+    ws['!cols']=[{wch:26},{wch:16},{wch:22},{wch:14},{wch:10},{wch:24}];
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'HanaList');
     XLSX.writeFile(wb, `${fnamePrefix}_${entries.length}건_${stamp()}.xlsx`);
 }
@@ -891,7 +1053,10 @@ function writeVCard(entries, fnamePrefix){
     const cards=entries.map(e=>{
         const nm=vEsc(e.name);
         const lines=['BEGIN:VCARD','VERSION:3.0','N:;'+nm+';;;','FN:'+nm];
-        if(e.phone) lines.push('TEL;TYPE=CELL:'+e.phone);
+        // 번호를 전부 출력 — 휴대폰은 CELL, 내선·일반전화는 WORK 로 구분해서 폰이 종류별로 보여주게 한다.
+        // (대표번호가 맨 앞. 목록이 없으면 예전처럼 대표번호 1줄만)
+        const plist=(e.phones&&e.phones.length)? e.phones : (e.phone? [{num:e.phone, label:''}] : []);
+        plist.forEach(p=>{ if(p.num) lines.push('TEL;TYPE='+(isMobilePhone(p)?'CELL':'WORK')+':'+p.num); });
         // 메모(사번/생년월일) 보존 — 이 줄이 없으면 폰에 저장할 때 메모가 통째로 사라진다.
         if(useMemo && e.id) lines.push('NOTE:'+vEscText(e.id));
         lines.push('END:VCARD');
@@ -907,8 +1072,8 @@ function exportManagedVCard(){ writeVCard(buildManagedEntries(), '담당명단_�
 // ⑤ 개인 명단(파일 출력용): '남김'에 체크된 이전담당(=개인 인맥으로 합침) + '남김'에 체크된 개인
 function buildKeptPerEntries(){
     const out=[];
-    S.ex.forEach(e=>{ if(e.keep) out.push({name:e.name, phone:e.group.phoneRaw, id:(e.group.notes||''), role:'', cat:'이전담당(남김)'}); });
-    S.per.forEach(p=>{ if(p.keep) out.push({name:(p.name||''), phone:p.group.phoneRaw, id:(p.group.notes||''), role:'', cat:'개인'}); });
+    S.ex.forEach(e=>{ if(e.keep) out.push(groupEntry(e.name, e.group, '이전담당(남김)')); });
+    S.per.forEach(p=>{ if(p.keep) out.push(groupEntry(p.name, p.group, '개인')); });
     return out;
 }
 function exportPerExcel(){ writeExcelBackup(buildKeptPerEntries(), '개인명단_관리엑셀'); }
