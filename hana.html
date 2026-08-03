@@ -57,14 +57,20 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.0.0</span></h2>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.1.1</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div class="d-flex align-items-end gap-2">
-            <div id="exportBtnGroup" style="display:none;" class="btn-group shadow-sm">
-                <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
-                <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> 모바일 vCard 저장</button>
-                <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식으로 출력</button>
+            <div id="exportBtnGroup" style="display:none;" class="d-flex flex-column align-items-end gap-1">
+                <div class="btn-group shadow-sm">
+                    <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
+                    <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> 모바일 vCard 저장</button>
+                    <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식으로 출력</button>
+                </div>
+                <div class="form-check mb-0" title="폰 연락처의 '메모'란에 사번/생년월일이 함께 저장됩니다. 끄면 이름·번호만 저장됩니다.">
+                    <input class="form-check-input" type="checkbox" id="vcardMemoCheck" checked>
+                    <label class="form-check-label small fw-bold text-secondary" for="vcardMemoCheck">vCard에 메모(사번/생년월일) 포함</label>
+                </div>
             </div>
             <button id="btnAdminLogin" class="btn btn-outline-dark btn-sm fw-bold shadow-sm" onclick="openAdminLoginModal()" title="슈퍼관리자 로그인">
                 <i class="bi bi-shield-lock-fill"></i> 관리자
@@ -154,8 +160,10 @@
                         <label class="btn btn-outline-danger fw-bold" for="viewWarning"><i class="bi bi-exclamation-triangle-fill"></i> 경고</label>
 
                         <input type="radio" class="btn-check" name="viewFilter" id="viewDupName" autocomplete="off">
-                        <label class="btn btn-warning fw-bold text-dark" for="viewDupName" title="이름은 같은데 번호가 다른 연락처만 봅니다 (동명이인 · 총무/설계사 복수코드 등). 이름을 구분해서 저장하세요.">
-                            <i class="bi bi-people-fill"></i> 이름중복 <span class="badge bg-danger ms-1" id="dupNameCount">0</span>
+                        <label class="btn btn-warning fw-bold text-dark" for="viewDupName" title="이름은 같은데 번호가 다른 연락처만 봅니다. 생년월일이 다르면 동명이인(A·B 구분 필요), 생년월일이 같으면 한 사람의 복수 코드(총무+영업)로 봅니다.">
+                            <i class="bi bi-people-fill"></i> 이름중복
+                            <span class="badge bg-danger ms-1" id="dupNameCount" title="동명이인(생년월일 다름) - 구분 필요">0</span>
+                            <span class="badge bg-info text-dark ms-1" id="samePersonCount" title="동일인 추정(생년월일 같음) - 구분 불필요">0</span>
                         </label>
                     </div>
                 </div>
@@ -216,14 +224,22 @@
 
             <div id="dupNameActionBar" class="align-items-center flex-wrap gap-2 px-3 py-2" style="display:none; background:#fff4e6; border-top:1px solid #ffe0b2;">
                 <i class="bi bi-people-fill text-warning"></i>
-                <span class="fw-bold text-dark">이름중복 일괄 구분 <span class="text-muted fw-normal small">(맨 끝에 붙임 · 예: 홍길동B) :</span></span>
+                <span class="fw-bold text-dark">동명이인 일괄 구분 <span class="text-muted fw-normal small">(맨 끝에 붙임 · 예: 홍길동B) :</span></span>
                 <button class="btn btn-sm btn-warning fw-bold text-dark shadow-sm" onclick="applyDupNameSuffix('all')">
                     모두 A·B·C <span class="fw-normal small">(1번째 A · 2번째 B…)</span>
                 </button>
                 <button class="btn btn-sm btn-outline-warning fw-bold text-dark shadow-sm" onclick="applyDupNameSuffix('fromSecond')">
                     2번째부터 B·C <span class="fw-normal small">(1번째 유지 · 2번째 B…)</span>
                 </button>
-                <span class="text-muted small ms-1"><i class="bi bi-info-circle"></i> 그룹 내 번호순으로 부여 · 되돌리려면 상단 [취소]</span>
+                <div class="form-check form-switch d-flex align-items-center mb-0 ms-1">
+                    <input class="form-check-input me-1 shadow-sm" type="checkbox" id="hideSamePerson">
+                    <label class="form-check-label small fw-bold text-dark" for="hideSamePerson" style="margin-top:2px;">동일인 추정 숨기기</label>
+                </div>
+                <span class="text-muted small ms-1" style="flex-basis:100%;">
+                    <i class="bi bi-info-circle"></i>
+                    <b>생년월일이 다르면</b> 동명이인 → 사람별로 A·B 부여(번호순).
+                    <b>생년월일이 같으면</b> 한 사람의 복수 코드(총무+영업)로 보고 <b>같은 이름 유지</b> — 구분 접미를 붙이지 않습니다. · 되돌리려면 상단 [취소]
+                </span>
             </div>
 
             <div class="card-body p-0 table-scroll-area">
@@ -268,6 +284,7 @@
                             <div class="dropzone-icon" id="adminDropIcon" style="color:#ffc107;"><i class="bi bi-cloud-arrow-up-fill"></i></div>
                             <h4 class="fw-bold mb-2" id="adminDropTitle" style="color:#ffc107;">파일을 드래그 앤 드롭</h4>
                             <p class="text-muted small mb-0">예: GA정보_전체정보_YYYYMMDD.xlsx</p>
+                            <p class="text-muted small mb-0">I열 <strong>상태</strong>가 <strong>정상</strong>인 지점만 반영됩니다 (영업중지 등 제외)</p>
                             <input type="file" id="adminTargetFile" class="d-none" accept=".xlsx, .xls">
                         </div>
                     </div>
@@ -457,6 +474,7 @@
     let globalData = [];
     let filteredData = [];
     let dupNameKeys = new Set();   // 이름중복(같은 이름·다른 번호) 이름 키 집합 (applyViewFilter에서 재계산)
+    let dupNameTags = new Map();   // 엔트리 객체 → { dupPerson, letter, personIdx, multiCode, unknown } (생년월일 기준 사람 판별 결과)
     let lastCheckedIndex = -1;
     let patternHistory = []; 
     let tempLoadPatterns = []; 
@@ -508,6 +526,7 @@
         document.getElementById('viewDup').addEventListener('change', applyViewFilter);
         document.getElementById('viewWarning').addEventListener('change', applyViewFilter);
         document.getElementById('viewDupName').addEventListener('change', applyViewFilter);
+        document.getElementById('hideSamePerson').addEventListener('change', applyViewFilter);
     });
 
     const dropZone = document.getElementById('dropZone');
@@ -655,15 +674,74 @@
     function clearSearch() { document.getElementById('searchInput').value = ''; applyViewFilter(); }
     function nameKey(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
 
-    // 이름중복(동명이인·복수코드) 재계산: globalData 이름별 카운트 → 2건 이상이면 표시 대상
+    // --- 이름중복 판별: 이름이 같아도 "생년월일"이 같으면 같은 사람(총무코드 + 본인 영업코드)으로 본다 ---
+    // 메모(id)는 `G1234, G5678 / 801212-3` 형태. '/' 뒤가 생년월일-성별코드(병합 시 쉼표로 복수).
+    function isBirth6(b) { const mm = +b.slice(2, 4), dd = +b.slice(4, 6); return mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31; }
+    function birthKeys(id) {
+        const s = String(id || '');
+        const cut = s.lastIndexOf('/');              // 사번에 '/'가 섞여 있어도 마지막 '/' 뒤가 생년월일
+        if (cut < 0) return [];
+        return s.slice(cut + 1).split(',')
+            .map(x => x.replace(/\D/g, ''))          // `801212-3 [지점스탭]` → 8012123
+            .filter(x => x.length >= 6 && isBirth6(x.slice(0, 6)))   // 월/일이 말이 되는 것만 (사번 오인 방지)
+            .map(x => x.slice(0, 7));                // 생년월일 6자리 + 성별코드 1자리
+    }
+    // 6자리(성별코드 없음)와 7자리를 관대하게 비교 — 한쪽이 다른쪽의 앞부분이면 동일 생년월일로 간주
+    function sameBirth(a, b) { return a === b || (a.length >= 6 && b.length >= 6 && (a.startsWith(b) || b.startsWith(a))); }
+
+    // 같은 이름 엔트리 목록 → "사람" 단위로 묶기. 생년월일이 하나라도 겹치면 같은 사람.
+    // 생년월일을 알 수 없는 엔트리는 각각 별개의 사람으로 취급(임의 병합 방지).
+    function groupByPerson(list) {
+        const persons = [];   // { births:[], items:[], unknown:bool }
+        list.forEach(d => {
+            const bs = birthKeys(d.id);
+            if (!bs.length) { persons.push({ births: [], items: [d], unknown: true }); return; }
+            const hits = [];
+            persons.forEach((p, i) => { if (!p.unknown && p.births.some(b => bs.some(x => sameBirth(b, x)))) hits.push(i); });
+            if (!hits.length) { persons.push({ births: bs.slice(), items: [d], unknown: false }); return; }
+            const base = persons[hits[0]];
+            base.items.push(d);
+            bs.forEach(b => { if (!base.births.includes(b)) base.births.push(b); });
+            for (let k = hits.length - 1; k >= 1; k--) {          // 여러 사람이 이어졌으면 하나로 합침
+                const p = persons[hits[k]];
+                base.items.push(...p.items);
+                p.births.forEach(b => { if (!base.births.includes(b)) base.births.push(b); });
+                persons.splice(hits[k], 1);
+            }
+        });
+        // 사람 순서 = 그룹 내 최소 전화번호순 (구분 접미 A·B·C 부여 순서와 화면 표시 순서를 일치시킴)
+        const minPhone = p => p.items.reduce((m, d) => (m === null || (d.phone || '') < m) ? (d.phone || '') : m, null) || '';
+        persons.sort((a, b) => minPhone(a) < minPhone(b) ? -1 : minPhone(a) > minPhone(b) ? 1 : 0);
+        persons.forEach(p => p.items.sort((a, b) => (a.phone || '') < (b.phone || '') ? -1 : (a.phone || '') > (b.phone || '') ? 1 : 0));
+        return persons;
+    }
+
+    // 이름중복 재계산: 이름별로 묶은 뒤 사람 단위로 분해 →
+    //   사람이 2명 이상 = 동명이인(A·B 구분 필요) / 사람은 1명인데 엔트리 2건 이상 = 동일인 복수코드(구분 불필요)
     function recomputeDupNames() {
-        const counts = new Map();
-        globalData.forEach(d => { const k = nameKey(d.tempName); if(k) counts.set(k, (counts.get(k) || 0) + 1); });
+        const byName = new Map();
+        globalData.forEach(d => { const k = nameKey(d.tempName); if (!k) return; if (!byName.has(k)) byName.set(k, []); byName.get(k).push(d); });
         dupNameKeys = new Set();
-        let total = 0;
-        counts.forEach((c, k) => { if(c >= 2){ dupNameKeys.add(k); total += c; } });
-        const badge = document.getElementById('dupNameCount');
-        if(badge) badge.innerText = total.toLocaleString();
+        dupNameTags = new Map();
+        let dupCnt = 0, sameCnt = 0;
+        byName.forEach((list, k) => {
+            if (list.length < 2) return;
+            dupNameKeys.add(k);
+            const persons = groupByPerson(list);
+            const isDupPerson = persons.length >= 2;
+            if (isDupPerson) dupCnt += list.length; else sameCnt += list.length;
+            persons.forEach((p, pi) => p.items.forEach(d => dupNameTags.set(d, {
+                dupPerson: isDupPerson,          // 동명이인 그룹인가
+                letter: colLetter(pi),           // 이 사람에게 부여될 구분 접미
+                personIdx: pi,
+                multiCode: p.items.length >= 2,  // 이 사람이 번호를 2개 이상 가짐(총무+영업 등)
+                unknown: p.unknown               // 생년월일 미상
+            })));
+        });
+        const b1 = document.getElementById('dupNameCount');
+        if (b1) b1.innerText = dupCnt.toLocaleString();
+        const b2 = document.getElementById('samePersonCount');
+        if (b2) b2.innerText = sameCnt.toLocaleString();
     }
 
     function applyViewFilter() {
@@ -676,6 +754,8 @@
         recomputeDupNames();
         const dupBar = document.getElementById('dupNameActionBar');
         if(dupBar) dupBar.style.display = isDupNameOnly ? 'flex' : 'none';
+        const hideSameChk = document.getElementById('hideSamePerson');
+        const hideSame = !!(hideSameChk && hideSameChk.checked);
 
         const searchStr = document.getElementById('searchInput').value.trim().toLowerCase();
         const keywords = searchStr ? searchStr.split(/\s+/) : [];
@@ -685,7 +765,10 @@
             if (isGaOnly && (!d.role || !d.role.includes('판매인(GA)'))) return false;
             if (isNewOnly && d.isVcfDup) return false;
             if (isDupOnly && !d.isVcfDup) return false;
-            if (isDupNameOnly && !dupNameKeys.has(nameKey(d.tempName))) return false;
+            if (isDupNameOnly) {
+                if (!dupNameKeys.has(nameKey(d.tempName))) return false;
+                if (hideSame && !(dupNameTags.get(d) || {}).dupPerson) return false;   // 동일인 추정(생년월일 같음) 숨기기
+            }
 
             if (keywords.length > 0) {
                 const targetText = d.tempName.toLowerCase();
@@ -693,10 +776,12 @@
             }
             return true;
         });
-        // 이름중복 보기: 같은 이름끼리 인접하도록 이름→번호순 정렬 (구분·수정 편의)
+        // 이름중복 보기: 같은 이름 → 같은 사람(생년월일)끼리 인접하도록 이름→사람순→번호순 정렬 (구분·수정 편의)
         if (isDupNameOnly) filteredData.sort((a, b) => {
             const ka = nameKey(a.tempName), kb = nameKey(b.tempName);
             if (ka !== kb) return ka < kb ? -1 : 1;
+            const pa = (dupNameTags.get(a) || {}).personIdx ?? 0, pb = (dupNameTags.get(b) || {}).personIdx ?? 0;
+            if (pa !== pb) return pa - pb;
             return (a.phone || '') < (b.phone || '') ? -1 : 1;
         });
         renderTable();
@@ -708,31 +793,46 @@
         while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
         return s;
     }
-    // 이름중복 그룹에 번호순으로 A·B·C 구분 접미를 일괄 부여
-    //   mode 'all'        : 1번째 A, 2번째 B, 3번째 C …
-    //   mode 'fromSecond' : 1번째 유지, 2번째 B, 3번째 C … (첫 사람 이름은 그대로)
+    // 동명이인(=이름 같고 생년월일 다름) 그룹에 번호순으로 A·B·C 구분 접미를 일괄 부여.
+    //   mode 'all'        : 1번째 사람 A, 2번째 사람 B, 3번째 사람 C …
+    //   mode 'fromSecond' : 1번째 사람 유지, 2번째 사람 B, 3번째 사람 C …
+    // ⚠️ 부여 단위는 "엔트리"가 아니라 "사람". 생년월일이 같은 복수 코드(총무+영업)는 한 사람이므로
+    //    번호가 2개여도 같은 접미(=같은 이름)를 받고, 사람이 1명뿐인 이름 그룹은 아예 건드리지 않는다.
     function applyDupNameSuffix(mode) {
         recomputeDupNames();
-        if (dupNameKeys.size === 0) { alert('이름중복 대상이 없습니다.'); return; }
-        // 그룹 구성 (globalData 기준, 번호순 정렬 → 화면 표시 순서와 동일)
-        const groups = new Map();
-        globalData.forEach(d => { const k = nameKey(d.tempName); if (dupNameKeys.has(k)) { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(d); } });
+        // 이름별 사람 그룹 재구성 (globalData 기준 — 화면 표시 순서와 동일하게 번호순 정렬됨)
+        const byName = new Map();
+        globalData.forEach(d => { const k = nameKey(d.tempName); if (dupNameKeys.has(k)) { if (!byName.has(k)) byName.set(k, []); byName.get(k).push(d); } });
+        const targets = [];   // [{ persons }] — 사람이 2명 이상인 이름 그룹만
+        let sameSkipped = 0;
+        byName.forEach(list => {
+            const persons = groupByPerson(list);
+            if (persons.length >= 2) targets.push(persons); else sameSkipped += list.length;
+        });
+        if (!targets.length) {
+            alert(sameSkipped > 0
+                ? `구분이 필요한 동명이인이 없습니다.\n\n이름이 겹치는 ${sameSkipped}건은 생년월일이 같아 "동일인(총무코드 + 본인 영업번호)"으로 판단되어 제외했습니다.`
+                : '이름중복 대상이 없습니다.');
+            return;
+        }
         const modeLabel = mode === 'all' ? '모두 A·B·C' : '2번째부터 B·C';
-        if (!confirm(`이름중복 ${groups.size}개 그룹에 "${modeLabel}" 구분 접미를 붙입니다.\n(되돌리려면 상단 [취소])\n\n적용할까요?`)) return;
+        const personCnt = targets.reduce((s, p) => s + p.length, 0);
+        if (!confirm(`동명이인 ${targets.length}개 이름 그룹(총 ${personCnt}명)에 "${modeLabel}" 구분 접미를 붙입니다.`
+            + (sameSkipped > 0 ? `\n\n※ 생년월일이 같아 동일인으로 판단된 ${sameSkipped}건은 이름을 바꾸지 않습니다.` : '')
+            + `\n(되돌리려면 상단 [취소])\n\n적용할까요?`)) return;
 
         saveState();
         let changed = 0;
-        const start = (mode === 'all') ? 0 : 1;   // fromSecond는 첫 번째(idx 0) 유지
-        groups.forEach(list => {
-            list.sort((a, b) => (a.phone || '') < (b.phone || '') ? -1 : (a.phone || '') > (b.phone || '') ? 1 : 0);
-            list.forEach((d, idx) => {
+        const start = (mode === 'all') ? 0 : 1;   // fromSecond는 첫 번째 사람(idx 0) 유지
+        targets.forEach(persons => {
+            persons.forEach((p, idx) => {
                 if (idx < start) return;
-                d.tempName = nameKey(d.tempName) + colLetter(idx);   // 카톡 20자 절약: 띄어쓰기 없이 바로 붙임
-                changed++;
+                p.items.forEach(d => { d.tempName = nameKey(d.tempName) + colLetter(idx); changed++; });   // 카톡 20자 절약: 띄어쓰기 없이 바로 붙임
             });
         });
         applyViewFilter();
-        showToastMessage(`이름중복 ${changed}건에 구분 접미(${modeLabel})를 적용했습니다`, 'primary');
+        showToastMessage(`동명이인 ${changed}건에 구분 접미(${modeLabel})를 적용했습니다`
+            + (sameSkipped > 0 ? ` · 동일인 추정 ${sameSkipped}건은 유지` : ''), 'primary');
     }
 
     function updateCountUI() {
@@ -756,9 +856,20 @@
             let badgeHtml = len >= 21 ? `<span class="badge ms-1" style="background-color: #dc3545; color: white;">(${len}자)</span>` : 
                             len >= 17 ? `<span class="badge ms-1" style="background-color: #ffc107; color: black;">(${len}자)</span>` : "";
             let mergedBadge = d.isMerged ? `<span class="badge bg-info text-dark ms-1">통합됨</span>` : "";
-            let isDupName = dupNameKeys.has(nameKey(d.tempName));
-            let dupNameBadge = isDupName ? `<span class="badge ms-1" style="background:#fd7e14;color:#fff;">이름중복</span>` : "";
-            let rowStyle = isDupName ? ` style="background:#fff4e6;"` : "";
+            // 이름중복 표시: 생년월일 기준으로 동명이인(주황·구분 필요) / 동일인 복수코드(청록·구분 불필요) 구분
+            const tag = dupNameTags.get(d);
+            let dupNameBadge = "", rowStyle = "";
+            if (tag) {
+                if (tag.dupPerson) {
+                    dupNameBadge = `<span class="badge ms-1" style="background:#fd7e14;color:#fff;" title="이름 같음 + 생년월일 다름 → 동명이인. 구분 접미 ${tag.letter} 대상">동명이인 ${tag.letter}</span>`;
+                    if (tag.multiCode) dupNameBadge += `<span class="badge ms-1" style="background:#0dcaf0;color:#000;" title="이 사람은 번호가 2개 이상입니다(총무코드 + 본인 영업번호 등). 같은 이름을 유지합니다.">복수코드</span>`;
+                    if (tag.unknown) dupNameBadge += `<span class="badge bg-secondary ms-1" title="메모에 생년월일이 없어 동일인 여부를 판단할 수 없습니다. 별개의 사람으로 취급했습니다.">생년월일?</span>`;
+                    rowStyle = ` style="background:#fff4e6;"`;
+                } else {
+                    dupNameBadge = `<span class="badge ms-1" style="background:#0dcaf0;color:#000;" title="이름 같음 + 생년월일 같음 → 동일인 추정(총무코드 + 본인 영업번호). 이름을 구분할 필요가 없습니다.">동일인 추정</span>`;
+                    rowStyle = ` style="background:#e6f7f9;"`;
+                }
+            }
 
             htmlChunks.push(`
                 <tr${rowStyle} onclick="handleRowClick(event, ${i})" ondblclick="openManualEditModal(${i})" title="더블클릭하여 수정">
@@ -984,7 +1095,24 @@
         if(targetList.length === 0) return alert("출력할 대상이 없습니다.");
         XLSX.writeFile(buildKakaoWorkbook(targetList.map(d => d.tempName)), `까톡오토_친구등록_${targetList.length}명_${Date.now()}.xlsx`);
     }
-    function exportVCard() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); let vcardStr = ""; targetList.forEach(d => { vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nN:;${d.tempName};;;\r\nFN:${d.tempName}\r\nTEL;TYPE=CELL:${d.phone}\r\nEND:VCARD\r\n`; }); const blob = new Blob([vcardStr], { type: "text/vcard;charset=utf-8" }); saveAs(blob, `Hana연락처_모바일_${Date.now()}.vcf`); }
+    // vCard TEXT 값 이스케이프 (RFC 2426): 역슬래시·쉼표·세미콜론·줄바꿈. 메모(사번/생년월일)에 쉼표가 들어가므로 필수.
+    function vcardEsc(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
+    function exportVCard() {
+        const targetList = filteredData.filter(d => d.selected);
+        if(targetList.length === 0) return alert("출력할 대상이 없습니다.");
+        const withMemo = document.getElementById('vcardMemoCheck');
+        const useMemo = !withMemo || withMemo.checked;
+        let vcardStr = "";
+        targetList.forEach(d => {
+            const nm = String(d.tempName || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;');   // 이름의 ;·\ 는 구조 문자라 이스케이프
+            vcardStr += `BEGIN:VCARD\r\nVERSION:3.0\r\nN:;${nm};;;\r\nFN:${nm}\r\nTEL;TYPE=CELL:${d.phone}\r\n`;
+            // 메모(사번/생년월일) 보존 — 이 줄이 없으면 폰에 저장할 때 메모가 통째로 사라진다.
+            if (useMemo && d.id) vcardStr += `NOTE:${vcardEsc(d.id)}\r\n`;
+            vcardStr += `END:VCARD\r\n`;
+        });
+        const blob = new Blob([vcardStr], { type: "text/vcard;charset=utf-8" });
+        saveAs(blob, `Hana연락처_모바일_${Date.now()}.vcf`);
+    }
 
     // ===== 슈퍼관리자 모드 =====
     const ADMIN_PW_HASH = '858b329d1a992594e73a5b7a2bd73a494603fec972024e16e9475fa11e52e4b2';
@@ -992,6 +1120,7 @@
     const ADMIN_SESSION_TTL_MS = 60 * 60 * 1000;
     let adminTargetFile = null;
     let adminAnalysisResult = null;
+    let adminSkipInfo = { skippedRows: 0, stoppedCodes: 0 }; // 상태≠'정상'으로 제외된 행/지점 수
 
     async function sha256Hex(text) {
         const buf = new TextEncoder().encode(text);
@@ -1106,17 +1235,25 @@
             const newRows = XLSX.utils.sheet_to_json(newSheet, { header: 1, defval: null });
 
             // 3. 인덱스 매핑 (Excel 컬럼 → 0-based 인덱스)
-            //    D=대리점명(3), F=본부명(5), G=지점코드(6), H=지점명(7), AC=지알엠1(28)
-            const COL = { agency: 3, hq: 5, branch: 6, branchName: 7, grm: 28 };
+            //    D=대리점명(3), F=본부명(5), G=지점코드(6), H=지점명(7), I=상태(8), AC=지알엠1(28)
+            const COL = { agency: 3, hq: 5, branch: 6, branchName: 7, status: 8, grm: 28 };
+            const STATUS_OK = '정상';
 
             // 4. 신규 파일 → GRM별 지점 리스트, 전체 지점코드 사전(삭제 항목 정보 보강용)
+            //    ⚠️ I열 '상태'가 '정상'인 행만 매칭 대상. '영업중지' 등은 GRM 담당에서 제외한다.
+            //    단 allBranchInfo(삭제 항목의 지점명 보강용)에는 상태와 무관하게 담아둔다.
             const newGrmMap = new Map();   // grmCode -> [{ branchCode, agency, hq, branchName }]
             const allBranchInfo = new Map(); // branchCode -> { agency, hq, branchName }
+            const normalCodes = new Set();   // 상태='정상' 행이 하나라도 있는 지점코드
+            const abnormalCodes = new Map(); // 지점코드 -> 상태값(비정상 행에서만)
+            const infoFromNormal = new Set(); // allBranchInfo를 정상 행으로 채운 지점코드
+            let skippedRows = 0;
             for (let r = 1; r < newRows.length; r++) {
                 const row = newRows[r];
                 if (!row) continue;
                 const branchCode = row[COL.branch] != null ? String(row[COL.branch]).trim() : '';
                 if (!branchCode) continue;
+                const status = row[COL.status] != null ? String(row[COL.status]).trim() : '';
                 const grm = row[COL.grm] != null ? String(row[COL.grm]).trim() : '';
                 const info = {
                     branchCode,
@@ -1124,12 +1261,24 @@
                     hq: row[COL.hq] != null ? String(row[COL.hq]).trim() : '',
                     branchName: row[COL.branchName] != null ? String(row[COL.branchName]).trim() : ''
                 };
-                if (!allBranchInfo.has(branchCode)) allBranchInfo.set(branchCode, info);
+                const isNormal = (status === STATUS_OK);
+                if (isNormal) normalCodes.add(branchCode);
+                else abnormalCodes.set(branchCode, status || '상태미상');
+                // 정상 행의 정보를 우선 보관 (비정상만 있는 코드는 그 정보라도 남김)
+                if (!allBranchInfo.has(branchCode) || (isNormal && !infoFromNormal.has(branchCode))) {
+                    allBranchInfo.set(branchCode, info);
+                    if (isNormal) infoFromNormal.add(branchCode);
+                }
+                if (!isNormal) { skippedRows++; continue; }
                 if (grm) {
                     if (!newGrmMap.has(grm)) newGrmMap.set(grm, []);
                     newGrmMap.get(grm).push(info);
                 }
             }
+            // 정상 행이 하나도 없는(=완전히 영업중지 등) 지점코드 → 삭제 사유 표기용
+            const stoppedStatusByCode = new Map();
+            abnormalCodes.forEach((st, bc) => { if (!normalCodes.has(bc)) stoppedStatusByCode.set(bc, st); });
+            adminSkipInfo = { skippedRows, stoppedCodes: stoppedStatusByCode.size };
 
             // 5. GRM별 비교
             const oldRow1 = oldRows[0] || [];
@@ -1185,7 +1334,9 @@
             result.forEach(r => {
                 r.removedDetails.forEach(x => {
                     const owner = newOwnerByCode.get(x.branchCode);
-                    x.note = (owner && owner.matchCode !== r.matchCode) ? `이동 ▶ ${owner.name}` : '';
+                    if (owner && owner.matchCode !== r.matchCode) x.note = `이동 ▶ ${owner.name}`;
+                    else if (stoppedStatusByCode.has(x.branchCode)) x.note = stoppedStatusByCode.get(x.branchCode);
+                    else x.note = '';
                 });
                 r.addedDetails.forEach(x => {
                     const prev = oldOwnerByCode.get(x.branchCode);
@@ -1255,7 +1406,8 @@
             &nbsp;|&nbsp; 추가 <span class="text-success fw-bold">+${totalAdded.toLocaleString()}</span>
             &nbsp;|&nbsp; 삭제 <span class="text-danger fw-bold">-${totalRemoved.toLocaleString()}</span>
             &nbsp;|&nbsp; 변경 없음 GRM <strong>${unchanged}</strong>명
-            <br><span class="text-muted">행을 클릭하면 상세 내역이 펼쳐집니다.</span>`;
+            ${adminSkipInfo.skippedRows > 0 ? `&nbsp;|&nbsp; <span class="text-warning fw-bold" title="I열 상태가 '정상'이 아닌 행은 매칭에서 제외됩니다">상태 제외 ${adminSkipInfo.skippedRows.toLocaleString()}행 (지점 ${adminSkipInfo.stoppedCodes.toLocaleString()}개)</span>` : ''}
+            <br><span class="text-muted">행을 클릭하면 상세 내역이 펼쳐집니다. (I열 '상태'가 <strong>정상</strong>인 지점만 반영)</span>`;
         const expandBtn = document.getElementById('btnExpandAll');
         if (expandBtn) expandBtn.innerHTML = '<i class="bi bi-arrows-expand"></i> 모두 펼치기';
         document.getElementById('adminResultArea').style.display = 'block';
