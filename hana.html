@@ -57,7 +57,7 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.1.1</span></h2>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm">v1.1.2</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div class="d-flex align-items-end gap-2">
@@ -310,6 +310,9 @@
                             </button>
                             <button class="btn btn-success fw-bold shadow-sm" onclick="downloadGrmDataResult()">
                                 <i class="bi bi-file-excel-fill"></i> GRM_Data.xlsx 다운로드
+                            </button>
+                            <button class="btn btn-warning fw-bold shadow-sm" onclick="downloadChangeLogResult()">
+                                <i class="bi bi-journal-text"></i> 변경내역.xlsx 다운로드
                             </button>
                         </div>
                     </div>
@@ -1413,13 +1416,25 @@
         document.getElementById('adminResultArea').style.display = 'block';
     }
 
+    // 결과를 colIndex 순(=기존 마스터 컬럼 순)으로 정렬해 반환. 두 다운로드 함수 공용.
+    function getSortedAdminResult() {
+        return adminAnalysisResult.slice().sort((a, b) => a.colIndex - b.colIndex);
+    }
+    // 오늘 날짜 YYMMDD — 변경내역 시트명/파일명에 사용
+    function adminDateTag() {
+        const now = new Date();
+        return String(now.getFullYear()).slice(2)
+            + String(now.getMonth() + 1).padStart(2, '0')
+            + String(now.getDate()).padStart(2, '0');
+    }
+
+    // ① GRM_Data.xlsx — 'GRM별_지점코드' 시트 **단독**. 다음 회차 분석의 기준 마스터가 되므로
+    //    변경내역을 섞지 않는다(시트가 늘면 재업로드 시 어떤 게 마스터인지 혼동).
     function downloadGrmDataResult() {
         if (!adminAnalysisResult) return alert('먼저 분석을 실행해주세요.');
-        // 셀 색상(노란 배경/빨간 글자)을 쓰려면 스타일 지원 빌드(XLSXStyle)가 필요. 메인 XLSX(0.20.0)는 스타일 write 미지원.
         const XL = window.XLSXStyle || XLSX;
-        const result = adminAnalysisResult.slice().sort((a, b) => a.colIndex - b.colIndex);
+        const result = getSortedAdminResult();
 
-        // Sheet 1: GRM별_지점코드
         const sheet1 = [];
         sheet1.push(result.map(r => r.codeRaw));
         sheet1.push(result.map(r => r.name));
@@ -1427,7 +1442,19 @@
         for (let i = 0; i < maxLen; i++) sheet1.push(result.map(r => r.finalCodes[i] != null ? r.finalCodes[i] : null));
         const ws1 = XL.utils.aoa_to_sheet(sheet1);
 
-        // Sheet 2: {YYMMDD} 변경내역  (구분/지점코드/대리점명/본부명/지점명/비고 = A~F)
+        const wb = XL.utils.book_new();
+        XL.utils.book_append_sheet(wb, ws1, 'GRM별_지점코드');
+        XL.writeFile(wb, 'GRM_Data.xlsx');
+    }
+
+    // ② {YYMMDD} 변경내역.xlsx — 변경내역 시트 **단독** 별도 파일.
+    //    셀 색상(노란 배경/빨간 글자)을 쓰려면 스타일 지원 빌드(XLSXStyle)가 필요. 메인 XLSX(0.20.0)는 스타일 write 미지원.
+    function downloadChangeLogResult() {
+        if (!adminAnalysisResult) return alert('먼저 분석을 실행해주세요.');
+        const XL = window.XLSXStyle || XLSX;
+        const result = getSortedAdminResult();
+
+        // {YYMMDD} 변경내역  (구분/지점코드/대리점명/본부명/지점명/비고 = A~F)
         const sheet2 = [];
         const rowMeta = []; // 행별 스타일 메타: 'grm'(헤더), 'removed'(삭제), 그 외
         result.forEach(r => {
@@ -1455,16 +1482,10 @@
             }
         }
 
-        const now = new Date();
-        const yy = String(now.getFullYear()).slice(2);
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const sheetName = `${yy}${mm}${dd} 변경내역`;
-
+        const tag = adminDateTag();
         const wb = XL.utils.book_new();
-        XL.utils.book_append_sheet(wb, ws1, 'GRM별_지점코드');
-        XL.utils.book_append_sheet(wb, ws2, sheetName);
-        XL.writeFile(wb, 'GRM_Data.xlsx');
+        XL.utils.book_append_sheet(wb, ws2, `${tag} 변경내역`);
+        XL.writeFile(wb, `${tag} 변경내역.xlsx`);
     }
 
     function toggleAllAdminDetails() {
