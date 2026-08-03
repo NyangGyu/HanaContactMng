@@ -319,6 +319,13 @@
                     <button class="btn btn-warning text-dark fw-bold" onclick="exportKaTalk()"><i class="bi bi-chat-dots-fill"></i> 까톡오토 양식 저장</button>
                     <button class="btn btn-outline-secondary fw-bold" onclick="exportReport()"><i class="bi bi-file-text"></i> 정리 요약 리포트(txt)</button>
                 </div>
+                <div class="form-check mt-3 mb-0">
+                    <input class="form-check-input" type="checkbox" id="vcardMemoCheck" checked>
+                    <label class="form-check-label fw-bold" for="vcardMemoCheck">
+                        vCard에 <b>메모(사번/생년월일)</b> 함께 저장
+                        <span class="mini text-muted d-block">끄면 이름·번호만 저장됩니다. 이 설정은 3·5단계의 vCard 저장에도 함께 적용됩니다.</span>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -733,11 +740,14 @@ function buildFinalStats(){
 // ===================== 내보내기: 구글 CSV =====================
 function blankRow(){ return new Array(S.oldHeader.length).fill(''); }
 function setCol(row,name,val){ const i=S.colIdx[name]; if(i!=null) row[i]=val; }
-function makeRowFromOld(origRow, displayName, label){
+function makeRowFromOld(origRow, displayName, label, fallbackNote){
     const row=origRow.slice();
     // 이름 통일: First Name에 전체 표시명, Middle/Last 비움, File As 동일
     setCol(row,'First Name',displayName); setCol(row,'Middle Name',''); setCol(row,'Last Name','');
     if('File As' in S.colIdx) setCol(row,'File As',displayName);
+    // 메모(사번/생년월일) 보존: 대표행의 Notes가 비어 있으면 같은 번호의 다른 행/현재명단 값으로 채움.
+    // (대표행만 쓰면 중복 그룹 중 메모가 다른 행에 있던 연락처의 메모가 유실됨)
+    if(!String(getCol(row,'Notes')||'').trim() && fallbackNote) setCol(row,'Notes', fallbackNote);
     // 라벨(그룹) 지정
     setCol(row,'Labels', label+' ::: * myContacts');
     return row;
@@ -754,10 +764,10 @@ function makeRowNew(agent, label){
 }
 function buildFinalRows(){
     const out=[];
-    S.matched.forEach(m=>{ out.push(makeRowFromOld(m.group.entries[0].row, finalMatchedName(m), '설계사')); });
+    S.matched.forEach(m=>{ out.push(makeRowFromOld(m.group.entries[0].row, finalMatchedName(m), '설계사', m.group.notes||m.agent.id||'')); });
     S.brandNew.forEach(a=>{ out.push(makeRowNew(a,'설계사')); });
-    S.ex.forEach(e=>{ if(e.keep) out.push(makeRowFromOld(e.group.entries[0].row, e.name, '이전담당')); });
-    S.per.forEach(p=>{ if(p.keep) out.push(makeRowFromOld(p.group.entries[0].row, p.name||oldDisplayName(p.group.entries[0].row), '개인')); });
+    S.ex.forEach(e=>{ if(e.keep) out.push(makeRowFromOld(e.group.entries[0].row, e.name, '이전담당', e.group.notes||'')); });
+    S.per.forEach(p=>{ if(p.keep) out.push(makeRowFromOld(p.group.entries[0].row, p.name||oldDisplayName(p.group.entries[0].row), '개인', p.group.notes||'')); });
     return out;
 }
 function exportGoogleCSV(){
@@ -801,12 +811,17 @@ function exportManagedExcel(){ writeExcelBackup(buildManagedEntries(), '담당�
 
 // ===================== 내보내기: vCard (모바일 저장용) =====================
 function vEsc(s){ return (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;'); }
+// NOTE 등 TEXT 값은 쉼표·줄바꿈까지 이스케이프해야 함 (RFC 2426). 메모가 `G111, G222 / 801212-3` 형태라 쉼표 필수.
+function vEscText(s){ return (s||'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;'); }
 function writeVCard(entries, fnamePrefix){
     if(!entries.length){ alert('저장할 연락처가 없습니다.'); return; }
+    const useMemo = (()=>{ const c=document.getElementById('vcardMemoCheck'); return !c || c.checked; })();
     const cards=entries.map(e=>{
         const nm=vEsc(e.name);
         const lines=['BEGIN:VCARD','VERSION:3.0','N:;'+nm+';;;','FN:'+nm];
         if(e.phone) lines.push('TEL;TYPE=CELL:'+e.phone);
+        // 메모(사번/생년월일) 보존 — 이 줄이 없으면 폰에 저장할 때 메모가 통째로 사라진다.
+        if(useMemo && e.id) lines.push('NOTE:'+vEscText(e.id));
         lines.push('END:VCARD');
         return lines.join('\r\n');
     });
