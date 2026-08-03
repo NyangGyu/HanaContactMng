@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구글 연락처 정리 도우미</title>
+    <title>구글 연락처 정리 도우미 v1.2.4</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -71,7 +71,7 @@
 
     <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-3">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미</h2>
+            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.4 · 260803</span></h2>
             <p class="text-secondary mb-0">이미 저장된 구글 주소록을 <b>현재 담당 명단</b>과 대조하여, 호칭·이전담당·개인 연락처를 정리합니다.</p>
         </div>
     </div>
@@ -93,7 +93,7 @@
             <ul>
                 <li><b>파일 2개</b>를 올립니다. 아무것도 서버로 전송되지 않고, 모두 이 브라우저 안에서만 처리됩니다.</li>
                 <li><b>① 구글 주소록 백업(CSV)</b> — 구글 연락처에서 “내보내기 → Google CSV”로 받은 <code>contacts.csv</code>. (지금 저장돼 있는 <u>전체</u> 연락처)</li>
-                <li><b>② 현재 담당 설계사 명단</b> — Hana 도구로 만든 <code>관리용 엑셀(.xlsx)</code> 또는 <code>모바일 vCard(.vcf)</code>. (지금 기준 <u>담당 구역</u>)</li>
+                <li><b>② 현재 담당 설계사 명단</b> — Hana 도구의 <b>[현재 작업 백업 (엑셀)]</b> 버튼으로 받은 <code>관리용 엑셀(.xlsx)</code>. (지금 기준 <u>담당 구역</u>) <b class="text-danger">vCard(.vcf)는 올릴 수 없습니다 — 아래 설명 참고.</b></li>
                 <li>두 파일을 대조해서, 지금도 담당인 사람은 <b>호칭만 정리</b>하고, 담당이 아닌 사람은 <b>이전담당/개인</b>으로 분류해 드립니다.</li>
             </ul>
         </div>
@@ -110,11 +110,11 @@
             </div>
             <div class="col-md-6">
                 <div class="dropzone" id="dzNew">
-                    <i class="bi bi-person-vcard ico"></i>
-                    <h5 class="fw-bold mt-2 mb-1">② 현재 담당 명단 (.xlsx / .vcf)</h5>
-                    <div class="mini">관리용 엑셀 또는 모바일 vCard 를 끌어다 놓거나 클릭</div>
+                    <i class="bi bi-file-earmark-excel ico"></i>
+                    <h5 class="fw-bold mt-2 mb-1">② 현재 담당 명단 (.xlsx)</h5>
+                    <div class="mini"><b>관리용 엑셀</b>을 끌어다 놓거나 클릭 <span class="text-danger">(vCard .vcf 불가)</span></div>
                     <div id="dzNewInfo" class="mt-2 fw-bold text-success"></div>
-                    <input type="file" id="fileNew" accept=".xlsx,.xls,.vcf" hidden>
+                    <input type="file" id="fileNew" accept=".xlsx,.xls" hidden>
                 </div>
             </div>
         </div>
@@ -124,6 +124,39 @@
                 <i class="bi bi-search"></i> 대조 분석 시작
             </button>
             <div class="mini mt-2">두 파일을 모두 올리면 활성화됩니다.</div>
+        </div>
+
+        <!-- ②번 파일을 엑셀로만 받는 이유 — 사용자가 vcf를 들고 와서 헤매지 않도록 업로드 화면에 못박아 둔다 -->
+        <div class="card mt-4 border-warning">
+            <div class="card-header fw-bold bg-warning-subtle">
+                <i class="bi bi-question-circle-fill text-warning"></i> ②번 명단은 왜 <u>엑셀(.xlsx)만</u> 되나요?
+            </div>
+            <div class="card-body">
+                <p class="mb-2">담당 명단에는 이름·전화번호 말고도 <b>사번 / 생년월일</b>과 <b>권한구분(직급)</b>이 함께 들어 있어야 합니다.
+                   이 정보로 <b>동명이인을 구분</b>하고, 지금 담당이 아닌 사람을 <b>이전담당</b>으로 골라냅니다.</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-2" style="max-width:640px;">
+                        <thead class="table-light">
+                            <tr><th>담기는 정보</th><th class="text-center">관리용 엑셀 (.xlsx)</th><th class="text-center">모바일 vCard (.vcf)</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>이름 · 전화번호</td><td class="text-center text-success fw-bold">○</td><td class="text-center text-success fw-bold">○</td></tr>
+                            <tr><td>사번 / 생년월일</td><td class="text-center text-success fw-bold">○</td><td class="text-center text-secondary">△ 메모칸에만</td></tr>
+                            <tr><td><b>권한구분(직급)</b></td><td class="text-center text-success fw-bold">○</td><td class="text-center text-danger fw-bold">✕ 담을 자리 없음</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mb-2"><b>vCard는 휴대폰에 저장하기 위한 형식</b>이라 이름·번호·메모 정도만 담기고 <b>권한구분을 넣을 칸이 아예 없습니다.</b>
+                   vCard로 올리면 여기서 만든 관리엑셀의 권한구분 칸이 비어버리고, 그 파일을 다시 Hana 도구에 넣으면 <b>[판매인(GA)만] 필터가 동작하지 않습니다.</b>
+                   그래서 <b>정보가 온전한 엑셀만</b> 받습니다.</p>
+                <div class="alert alert-light border mb-0 py-2">
+                    <b><i class="bi bi-download"></i> 파일 받는 곳:</b>
+                    Hana 연락처 정리 도우미 → 오른쪽 위 <span class="badge bg-dark">현재 작업 백업 (엑셀)</span> 버튼
+                    → <code>Hana연락처백업_*.xlsx</code>
+                    <div class="mini mt-1 text-muted">이 화면에서 만든 <code>담당명단_관리엑셀_*.xlsx</code> 도 같은 양식이라 그대로 쓸 수 있습니다.
+                        휴대폰용 vCard는 <b>마지막(6단계) 내보내기</b>에서 받으세요 — 폰에 저장하는 용도입니다.</div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -450,11 +483,22 @@ function loadOld(file, dz){
 
 function loadNew(file, dz){
     const ext=file.name.split('.').pop().toLowerCase();
+    // ⚠️ vCard(.vcf)는 담당 명단으로 받지 않는다(v1.2.4). 권한구분(직급)을 담을 필드가 vCard 규격에 없어
+    //    이 화면의 산출물에서 권한구분이 통째로 비고, 그 파일을 Hana 도구에 되넣으면 [판매인(GA)만] 필터가 죽는다.
     if(ext==='vcf'){
-        const r=new FileReader();
-        r.onload=e=>{ parseVcf(e.target.result); afterNew(dz); };
-        r.readAsText(file,'UTF-8');
-    } else {
+        alert('현재 담당 명단은 관리용 엑셀(.xlsx)만 올릴 수 있습니다.\n\n'
+            + 'vCard(.vcf)는 휴대폰 저장용 형식이라 권한구분(직급)을 담을 칸이 없고,\n'
+            + '사번/생년월일도 메모칸에만 들어가서 명단으로 쓰기엔 정보가 모자랍니다.\n\n'
+            + '▶ Hana 연락처 정리 도우미 → [현재 작업 백업 (엑셀)] 버튼으로 받은\n'
+            + '   Hana연락처백업_*.xlsx 를 올려주세요.\n'
+            + '   (이 화면에서 저장한 담당명단_관리엑셀_*.xlsx 도 같은 양식이라 사용 가능합니다)');
+        return;
+    }
+    if(ext!=='xlsx' && ext!=='xls'){
+        alert('엑셀 파일(.xlsx)만 올릴 수 있습니다.\n\n올리신 파일: ' + file.name);
+        return;
+    }
+    {
         const r=new FileReader();
         r.onload=e=>{
             const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
@@ -471,17 +515,45 @@ function loadNew(file, dz){
         r.readAsArrayBuffer(file);
     }
 }
+// vCard TEXT 값 언이스케이프 (RFC 2426) — 쓸 때 `\,` `\;` `\n` `\\` 로 이스케이프한 것을 되돌린다.
+function vUnesc(s){ return String(s||'').replace(/\\([\\,;nN])/g, (m,c)=> (c==='n'||c==='N') ? '\n' : c); }
+// ⚠️ v1.2.4부터 담당 명단의 .vcf 업로드를 막았으므로 현재 호출되지 않는다(loadNew가 alert 후 return).
+//    vCard 규격에 권한구분(직급)을 담을 자리가 없다는 게 차단 이유이며, 파서 자체는 정상이므로
+//    나중에 다시 허용할 경우를 대비해 남겨둔다. 지우려면 loadNew의 vcf 분기와 함께 정리할 것.
 function parseVcf(text){
     S.newAgents=[]; let cur={};
-    text.split(/\r?\n/).forEach(line=>{
-        if(line.startsWith('FN:')) cur.name=line.slice(3).trim();
+    // 접힌 줄(line folding) 펴기: 다음 줄이 공백/탭으로 시작하면 앞줄의 연속이다 (폰에서 뽑은 vcf 대응)
+    const lines=[];
+    text.split(/\r?\n/).forEach(raw=>{
+        if(/^[ \t]/.test(raw) && lines.length) lines[lines.length-1]+=raw.slice(1);
+        else lines.push(raw);
+    });
+    lines.forEach(line=>{
+        if(/^FN[^:]*:/i.test(line)) cur.name=vUnesc(line.slice(line.indexOf(':')+1)).trim();
         else if(/^TEL/i.test(line)){ const m=line.match(/:(.*)$/); if(m){ cur.phone=m[1].trim(); } }
-        else if(line.startsWith('END:VCARD')){ if(cur.name){ S.newAgents.push({name:cur.name, phone:cur.phone||'', phoneKey:normPhone(cur.phone||''), id:'', gnum:'', role:''}); } cur={}; }
+        // 메모(사번/생년월일) 읽기 — 이 줄이 없으면 vcf로 명단을 올렸을 때 사번/생년월일이 통째로 비어버린다.
+        else if(/^NOTE[^:]*:/i.test(line)){ const v=vUnesc(line.slice(line.indexOf(':')+1)).replace(/\s*\n\s*/g,' ').trim(); if(v) cur.id=cur.id? (cur.id+' '+v) : v; }
+        else if(line.startsWith('END:VCARD')){
+            if(cur.name){ const id=cur.id||''; S.newAgents.push({name:cur.name, phone:cur.phone||'', phoneKey:normPhone(cur.phone||''), id, gnum:gnumOf(id), role:''}); }
+            cur={};
+        }
     });
 }
 function afterNew(dz){
     S.loadedNew=true;
-    document.getElementById('dzNewInfo').innerText=`✔ ${S.newAgents.length.toLocaleString()}명 로드됨`;
+    const withId=S.newAgents.filter(a=>a.id&&a.id.trim()).length;
+    const info=document.getElementById('dzNewInfo');
+    info.innerText=`✔ ${S.newAgents.length.toLocaleString()}명 로드됨`;
+    // 사번/생년월일이 하나도 안 들어왔으면 미리 경고 — 이 상태로 진행하면 관리엑셀·vCard의 메모 칸이 전부 빈다.
+    if(S.newAgents.length && withId===0){
+        info.innerHTML=`✔ ${S.newAgents.length.toLocaleString()}명 로드됨`
+            +`<div class="text-danger fw-bold mt-1" style="font-size:.85rem;">⚠ 사번/생년월일(메모)이 하나도 없는 파일입니다.<br>`
+            +`이대로 진행하면 저장하는 관리엑셀·vCard의 메모 칸이 빕니다.<br>`
+            +`Hana 도구에서 <b>관리용 엑셀(.xlsx)</b>로 다시 받아 올리거나, 메모가 포함된 최신 vCard를 사용하세요.</div>`;
+    } else if(S.newAgents.length && withId < S.newAgents.length){
+        info.innerHTML=`✔ ${S.newAgents.length.toLocaleString()}명 로드됨`
+            +`<div class="text-warning-emphasis mt-1" style="font-size:.85rem;">사번/생년월일 있음 ${withId.toLocaleString()}명 · 없음 ${(S.newAgents.length-withId).toLocaleString()}명</div>`;
+    }
     dz.classList.add('loaded');
     checkReady();
 }
