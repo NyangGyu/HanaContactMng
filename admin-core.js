@@ -14,23 +14,50 @@
 }(typeof self !== 'undefined' ? self : this, function () {
     'use strict';
 
-    // GA정보_전체정보 컬럼 매핑 (Excel 열 → 0-based 인덱스)
-    // D=대리점명, F=본부명, G=지점코드, H=지점명, I=상태, AC=지알엠1
-    var COL = { agency: 3, hq: 5, branch: 6, branchName: 7, status: 8, grm: 28 };
+    // GA정보_전체정보 컬럼 매핑 — **1행 헤더 이름으로 찾는다** (열 위치 고정 금지).
+    // ⚠️ 2026-10 전산 양식에 N열 '스탭'이 끼어들어 뒤 열이 한 칸씩 밀렸다(지알엠1: AC→AD).
+    //    위치(28)로 읽던 때는 '이행보증상태'(빈 칸)를 GRM으로 읽어 매칭 0건 → 전 지점이
+    //    '삭제'로 잡히고 마스터가 빈 파일로 덮어써졌다. 열이 또 추가/이동돼도 이름만 같으면 된다.
+    var HEADERS = { agency: '대리점명', hq: '본부명', branch: '지점코드', branchName: '지점명', status: '상태', grm: '지알엠1' };
     var STATUS_OK = '정상';
     var CHANGELOG_HEADER = ['구분', '지점코드', '대리점명', '본부명', '지점명', '비고'];
+    // 한 번에 기존 지점의 이 비율 넘게 사라지면 양식 변경/잘못된 파일로 본다.
+    // 실측 삭제율: 260901 7%, 261002 27%(GRM 담당 재편이 있던 달) — 재편 달도 통과해야 하므로 절반으로 잡는다.
+    var MAX_REMOVED_RATIO = 0.5;
 
     function s(v) { return v == null ? '' : String(v).trim(); }
+    function normHeader(v) { return s(v).replace(/\s+/g, ''); }
+
+    /**
+     * GA정보 1행(헤더)에서 필요한 열의 위치를 이름으로 찾는다.
+     * 하나라도 못 찾으면 **추측하지 않고 에러** — 엉뚱한 열을 조용히 읽는 것보다 멈추는 게 낫다.
+     * @returns {{agency:number, hq:number, branch:number, branchName:number, status:number, grm:number}}
+     */
+    function resolveColumns(headerRow) {
+        var names = (headerRow || []).map(normHeader);
+        var col = {}, missing = [];
+        Object.keys(HEADERS).forEach(function (k) {
+            var idx = names.indexOf(HEADERS[k]);
+            if (idx < 0) missing.push(HEADERS[k]); else col[k] = idx;
+        });
+        if (missing.length) {
+            throw new Error("GA정보 파일 1행(제목줄)에서 '" + missing.join("', '") + "' 열을 찾을 수 없습니다. "
+                + '전산 양식이 바뀌었거나 다른 파일입니다. (1행: ' + names.filter(Boolean).join(', ') + ')');
+        }
+        return col;
+    }
 
     /**
      * GA정보 신규 파일 × 기존 마스터를 대조해 GRM별 추가/삭제/유지를 산출.
      * @param {Array[]} newRows  GA정보_전체정보 시트의 AOA (1행 = 헤더)
      * @param {Array[]} oldRows  기존 GRM_Data.xlsx의 'GRM별_지점코드' 시트 AOA
-     * @returns {{result: Array, skipInfo: {skippedRows:number, stoppedCodes:number}}}
+     * @returns {{result: Array, skipInfo: {skippedRows:number, stoppedCodes:number, unmatchedGrm:{code:string,count:number}[]}}}
      */
     function analyzeBranches(newRows, oldRows) {
+        var COL = resolveColumns(newRows && newRows[0]);
+
         // ── 1. 신규 파일 인덱싱 ─────────────────────────────────────────
-        // ⚠️ I열 '상태'가 '정상'인 행만 GRM 매칭 대상. '영업중지' 등이 섞이면 폐점 지점이
+        // ⚠️ '상태' 열이 '정상'인 행만 GRM 매칭 대상. '영업중지' 등이 섞이면 폐점 지점이
         //    담당에 추가되고, 삭제로 잡혀야 할 지점이 kept로 남아 마스터가 오염된다.
         //    단 allBranchInfo(삭제 항목의 지점명 보강용)는 상태 무관하게 채운다.
         var newGrmMap = new Map();      // grmCode -> [지점info]
@@ -142,9 +169,19 @@
             });
         });
 
+        // ── 4. 마스터에 담당 열이 없는 GRM ──────────────────────────────
+        // GA파일엔 '정상' 지점을 들고 있는데 마스터 1행(대표사번)에 없는 지알엠1 → 그 지점들은 어느 열에도
+        // 못 들어가고 조용히 빠진다. 신규 GRM이거나 공동담당 열의 2·3번째 사번인 경우라 사람이 봐야 한다.
+        var matchCodes = new Set(result.map(function (r2) { return r2.matchCode; }));
+        var unmatchedGrm = [];
+        newGrmMap.forEach(function (list, code) {
+            if (!matchCodes.has(code)) unmatchedGrm.push({ code: code, count: list.length });
+        });
+        unmatchedGrm.sort(function (a, b) { return b.count - a.count; });
+
         return {
             result: result,
-            skipInfo: { skippedRows: skippedRows, stoppedCodes: stoppedStatusByCode.size }
+            skipInfo: { skippedRows: skippedRows, stoppedCodes: stoppedStatusByCode.size, unmatchedGrm: unmatchedGrm }
         };
     }
 
@@ -226,6 +263,21 @@
         return t;
     }
 
+    /**
+     * 결과가 상식 밖이면 사유 문자열, 정상이면 null.
+     * 호스트(deploy.mjs / hana.html)는 사유가 있으면 **마스터를 쓰기 전에** 멈춘다.
+     * 열 이름 검사를 통과하고도 내용이 틀어진 경우(빈 GRM 열, 엉뚱한 달 파일 등)의 마지막 안전망.
+     */
+    function sanityCheck(result) {
+        var t = summarize(result);
+        if (t.old > 0 && t.now === 0)
+            return 'GA정보 파일에서 GRM 담당 지점을 하나도 찾지 못했습니다 (지알엠1 열이 비어 있음).';
+        if (t.old > 0 && t.removed / t.old > MAX_REMOVED_RATIO)
+            return '기존 지점 ' + t.old + '개 중 ' + t.removed + '개(' + Math.round(t.removed / t.old * 100)
+                + '%)가 삭제로 잡혔습니다. 정상적인 월 변동으로 보기 어렵습니다 — GA정보 파일 양식을 확인하세요.';
+        return null;
+    }
+
     /** YYMMDD 태그 (변경내역 시트명/파일명용). 인자 생략 시 오늘. */
     function dateTag(d) {
         d = d || new Date();
@@ -234,8 +286,10 @@
     }
 
     return {
-        COL: COL,
+        HEADERS: HEADERS,
         STATUS_OK: STATUS_OK,
+        resolveColumns: resolveColumns,
+        sanityCheck: sanityCheck,
         analyzeBranches: analyzeBranches,
         sortResult: sortResult,
         buildMasterSheet: buildMasterSheet,

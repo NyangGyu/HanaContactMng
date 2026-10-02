@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.2.7</title>
+    <title>Hana 연락처 정리 도우미 v1.2.9</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -14,7 +14,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <!-- 슈퍼관리자 분석 엔진(공유 모듈). deploy.mjs(로컬 배포 스크립트)도 같은 파일을 로드한다 -->
-    <script src="./admin-core.js"></script>
+    <script src="./admin-core.js?v=1.2.9"></script>
 
     <style>
         body { background-color: #f4f6f9; font-family: 'Malgun Gothic', sans-serif; }
@@ -59,7 +59,7 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.7 · 260804</span></h2>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.9 · 261002</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div class="d-flex align-items-end gap-2">
@@ -286,7 +286,7 @@
                             <div class="dropzone-icon" id="adminDropIcon" style="color:#ffc107;"><i class="bi bi-cloud-arrow-up-fill"></i></div>
                             <h4 class="fw-bold mb-2" id="adminDropTitle" style="color:#ffc107;">파일을 드래그 앤 드롭</h4>
                             <p class="text-muted small mb-0">예: GA정보_전체정보_YYYYMMDD.xlsx</p>
-                            <p class="text-muted small mb-0">I열 <strong>상태</strong>가 <strong>정상</strong>인 지점만 반영됩니다 (영업중지 등 제외)</p>
+                            <p class="text-muted small mb-0"><strong>상태</strong> 열이 <strong>정상</strong>인 지점만 반영됩니다 (영업중지 등 제외)</p>
                             <input type="file" id="adminTargetFile" class="d-none" accept=".xlsx, .xls">
                         </div>
                     </div>
@@ -1125,7 +1125,7 @@
     const ADMIN_SESSION_TTL_MS = 60 * 60 * 1000;
     let adminTargetFile = null;
     let adminAnalysisResult = null;
-    let adminSkipInfo = { skippedRows: 0, stoppedCodes: 0 }; // 상태≠'정상'으로 제외된 행/지점 수
+    let adminSkipInfo = { skippedRows: 0, stoppedCodes: 0, unmatchedGrm: [] }; // 상태≠'정상'으로 제외된 행/지점 수
 
     async function sha256Hex(text) {
         const buf = new TextEncoder().encode(text);
@@ -1242,6 +1242,8 @@
             // 3. 분석 — 규칙은 전부 admin-core.js에 있다(deploy.mjs와 공유).
             if (typeof AdminCore === 'undefined') throw new Error('admin-core.js 로드 실패 — 같은 폴더에 있는지 확인하세요.');
             const { result, skipInfo } = AdminCore.analyzeBranches(newRows, oldRows);
+            const insane = AdminCore.sanityCheck(result);   // 양식 변경 등으로 결과가 비정상이면 화면에 올리지 않는다
+            if (insane) throw new Error(insane);
             adminSkipInfo = skipInfo;
             adminAnalysisResult = result;
             renderAdminResult(result);
@@ -1305,8 +1307,9 @@
             &nbsp;|&nbsp; 추가 <span class="text-success fw-bold">+${totalAdded.toLocaleString()}</span>
             &nbsp;|&nbsp; 삭제 <span class="text-danger fw-bold">-${totalRemoved.toLocaleString()}</span>
             &nbsp;|&nbsp; 변경 없음 GRM <strong>${unchanged}</strong>명
-            ${adminSkipInfo.skippedRows > 0 ? `&nbsp;|&nbsp; <span class="text-warning fw-bold" title="I열 상태가 '정상'이 아닌 행은 매칭에서 제외됩니다">상태 제외 ${adminSkipInfo.skippedRows.toLocaleString()}행 (지점 ${adminSkipInfo.stoppedCodes.toLocaleString()}개)</span>` : ''}
-            <br><span class="text-muted">행을 클릭하면 상세 내역이 펼쳐집니다. (I열 '상태'가 <strong>정상</strong>인 지점만 반영)</span>`;
+            ${adminSkipInfo.skippedRows > 0 ? `&nbsp;|&nbsp; <span class="text-warning fw-bold" title="'상태' 열이 '정상'이 아닌 행은 매칭에서 제외됩니다">상태 제외 ${adminSkipInfo.skippedRows.toLocaleString()}행 (지점 ${adminSkipInfo.stoppedCodes.toLocaleString()}개)</span>` : ''}
+            ${(adminSkipInfo.unmatchedGrm || []).length ? `<br><span class="text-danger fw-bold">⚠ 담당 열 없음: ${adminSkipInfo.unmatchedGrm.map(u => `${u.code} ${u.count.toLocaleString()}개`).join(', ')} — 마스터 1행에 없는 GRM 사번이라 어느 열에도 들어가지 않습니다</span>` : ''}
+            <br><span class="text-muted">행을 클릭하면 상세 내역이 펼쳐집니다. ('상태' 열이 <strong>정상</strong>인 지점만 반영)</span>`;
         const expandBtn = document.getElementById('btnExpandAll');
         if (expandBtn) expandBtn.innerHTML = '<i class="bi bi-arrows-expand"></i> 모두 펼치기';
         document.getElementById('adminResultArea').style.display = 'block';
