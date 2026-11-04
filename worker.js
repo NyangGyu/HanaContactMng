@@ -1,5 +1,15 @@
-// worker.js (v0.7.1 - 실시간 진행률 보고 및 스마트 병합 엔진)
+// worker.js (v1.5.0 - 실시간 진행률 보고 및 스마트 병합 엔진 + 원본 열 보존)
 importScripts('https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js');
+
+// v1.5.0: 회사 명단 원본 값(성명·사번·대리점·지점)을 객체에 보존 → 백업 엑셀 E~H 열로 출력.
+// ⚠️ 열 제목은 앱·GA 관리자용 웹이 이 이름으로 찾는다. 바꾸면 양쪽에 알릴 것.
+const ORIG_COLS = [['realName', '성명'], ['empNo', '사번'], ['agency', '대리점'], ['branch', '지점']];
+const JOIN = '/';   // 같은 번호에 여러 값이 합쳐질 때 구분자 (원본 데이터에 '/' 0건 확인)
+function addUnique(cur, v) {
+    if (!v) return cur;
+    if (!cur) return v;
+    return cur.split(JOIN).includes(v) ? cur : cur + JOIN + v;
+}
 
 self.onmessage = function(e) {
     const { fileBuffer, branchArray, startDate, endDate } = e.data;
@@ -18,6 +28,9 @@ self.onmessage = function(e) {
 
         // 2단계: 데이터 추출 및 병합 (여기서부터 1,000건 단위로 진행률 보고)
         if (isBackup) {
+            // E~H는 위치가 아니라 제목으로 찾는다 (google.html 관리엑셀은 E=분류, F=보조 연락처). 없으면 빈칸.
+            const hdr = rows[0].map(h => String(h).trim());
+            const origIdx = ORIG_COLS.map(([, title]) => hdr.indexOf(title));
             for (let i = 1; i < totalRows; i++) {
                 const row = rows[i];
                 if (!row[0] && !row[1]) continue;
@@ -29,7 +42,9 @@ self.onmessage = function(e) {
                 
                 const key = phone.replace(/\D/g, "") || (tempName + i); 
                 if (!resultMap.has(key)) {
-                    resultMap.set(key, { tempName, phone, id, role, selected: true, isMerged: false }); 
+                    const ent = { tempName, phone, id, role, selected: true, isMerged: false };
+                    ORIG_COLS.forEach(([f], k) => { ent[f] = origIdx[k] >= 0 ? String(row[origIdx[k]] || "").trim() : ""; });
+                    resultMap.set(key, ent);
                 }
 
                 // 1,000건마다 진행률 발송 (메인 스레드 과부하 방지)
@@ -78,12 +93,24 @@ self.onmessage = function(e) {
                         `${agency} ${head} ${branchName} ${name}`;
                     tempName = tempName.replace(/\s+/g, ' ').trim();
 
+                    // 사람 = 성명+생년월일. 같은 번호를 쓰는 다른 사람(동명이인 포함)은 성명이 '/'로 여럿 남아
+                    // 앱·웹이 '후보 여러 명 → 확인 필요'로 처리한다. 같은 사람(코드만 여러 개)이면 성명 1개.
+                    const personKey = name + '|' + birth6;
                     if (!resultMap.has(phoneKey)) {
-                        resultMap.set(phoneKey, { tempName, phone, id: agentId, role, selected: true, isMerged: false });
+                        resultMap.set(phoneKey, { tempName, phone, id: agentId, role, selected: true, isMerged: false,
+                            realName: name, empNo, agency, branch: branchName, _persons: [personKey] });
                     } else {
                         // 스마트 병합 로직
                         let existing = resultMap.get(phoneKey);
-                        
+
+                        if (!existing._persons.includes(personKey)) {
+                            existing._persons.push(personKey);
+                            existing.realName = existing.realName ? existing.realName + JOIN + name : name;
+                        }
+                        existing.empNo = addUnique(existing.empNo, empNo);
+                        existing.agency = addUnique(existing.agency, agency);
+                        existing.branch = addUnique(existing.branch, branchName);
+
                         if (role && !existing.role.includes(role)) {
                             if (existing.role === '판매인(GA)') existing.role = role;
                             else existing.role += `, ${role}`;
@@ -115,7 +142,9 @@ self.onmessage = function(e) {
         
         // 최종 100% 완료 발송 후 데이터 반환
         self.postMessage({ status: 'progress', current: totalRows, total: totalRows });
-        self.postMessage({ status: 'success', data: Array.from(resultMap.values()) });
+        const out = Array.from(resultMap.values());
+        out.forEach(d => { delete d._persons; });
+        self.postMessage({ status: 'success', data: out });
 
     } catch(err) {
         self.postMessage({ status: 'error', message: err.message });

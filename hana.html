@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.2.9</title>
+    <title>Hana 연락처 정리 도우미 v1.5.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -59,7 +59,7 @@
     
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.9 · 261002</span></h2>
+            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.5.0 · 261104</span></h2>
             <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
         </div>
         <div class="d-flex align-items-end gap-2">
@@ -1076,7 +1076,9 @@
     function downloadModifiedPatterns() { const patternsToSave = extractModifiedPatternsFromDOM(); if(patternsToSave.length === 0) return alert("저장할 패턴이 없습니다."); const blob = new Blob([JSON.stringify(patternsToSave, null, 2)], { type: "application/json" }); saveAs(blob, `편집패턴_수정본_${Date.now()}.json`); }
 
     // --- 파일 추출 ---
-    function exportExcelBackup() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분"]]; targetList.forEach(d => wsData.push([d.tempName, d.phone, d.id, d.role]) ); const ws = XLSX.utils.aoa_to_sheet(wsData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "HanaList"); XLSX.writeFile(wb, `Hana연락처백업_${Date.now()}.xlsx`); }
+    // v1.5.0: A~D는 그대로(worker 재로드·google.html이 앞 4열을 읽음), E~H = 회사 명단 원본 값(편집 안 함, 없으면 빈칸).
+    // ⚠️ E~H 열 제목(성명/사번/대리점/지점)은 폰 앱·GA 관리자용 웹이 제목으로 찾는다 — 바꾸지 말 것.
+    function exportExcelBackup() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분", "성명", "사번", "대리점", "지점"]]; targetList.forEach(d => wsData.push([d.tempName, d.phone, d.id, d.role, d.realName || "", d.empNo || "", d.agency || "", d.branch || ""]) ); const ws = XLSX.utils.aoa_to_sheet(wsData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "HanaList"); XLSX.writeFile(wb, `Hana연락처백업_${Date.now()}.xlsx`); }
     // GGaTalk_친구등록_양식.xlsx 기준 (2026-07 교체): Kakao_List 시트에 이름을 A열 2행부터, 참고용 Group_List 시트 포함.
     // ⚠️ Group_List 그룹명은 GGaTalk 양식 파일에서 그대로 가져온 것. 양식이 또 바뀌면 google.html과 함께 갱신할 것.
     const KAKAO_GROUPS = ['GAK 담당전체','IFA 담당전체','KGA 담당전체','KMI 담당전체','W에셋 담당전체','HK 담당전체','굿리치 담당전체','글로벌 담당전체','프라임 담당전체','에이플 담당전체','더베스트 담당전체','마이금융 담당전체','메가 담당전체','메타리치 담당전체','밸류 담당전체','삼성금융 담당전체','스카이블루 담당전체','신금플 담당전체','아너스 담당전체','엠금융 담당전체','영진 담당전체','원금융 담당전체','유퍼스트 담당전체','인카 담당전체','한보금 담당전체','한화금융서비스 담당전체','한화라이프랩 담당전체','에이플 담당전체 (본채널만)','삼성화재금융서비스','에이플러스 (임시)','싱크임시그룹'];

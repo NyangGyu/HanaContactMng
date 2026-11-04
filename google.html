@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구글 연락처 정리 도우미 v1.2.9</title>
+    <title>구글 연락처 정리 도우미 v1.5.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -71,7 +71,7 @@
 
     <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-3">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.2.9 · 261002</span></h2>
+            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.5.0 · 261104</span></h2>
             <p class="text-secondary mb-0">이미 저장된 구글 주소록을 <b>현재 담당 명단</b>과 대조하여, 호칭·이전담당·개인 연락처를 정리합니다.</p>
         </div>
     </div>
@@ -226,6 +226,7 @@
             <button class="btn btn-sm btn-success fw-bold" onclick="exportManagedExcel()"><i class="bi bi-file-earmark-excel"></i> 관리용 엑셀</button>
             <button class="btn btn-sm btn-dark fw-bold" onclick="exportManagedVCard()"><i class="bi bi-phone-fill"></i> 모바일 vCard</button>
             <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="exportKaTalk()"><i class="bi bi-chat-dots-fill"></i> 까톡오토 양식</button>
+            <button class="btn btn-sm btn-outline-warning text-dark fw-bold" onclick="exportKakaoChanges()" title="바뀐 사람만(변경·추가·삭제) — 6단계에서도 받을 수 있습니다"><i class="bi bi-arrow-left-right"></i> 까톡오토 변경목록</button>
         </div>
         <div class="mini mb-2" id="matchedCount"></div>
         <div class="table-scroll">
@@ -346,6 +347,7 @@
                 <li><b>모바일 vCard(.vcf)</b> — 정리된 최종 연락처를 휴대폰에 바로 저장할 수 있는 vCard 3.0 형식으로 출력합니다.</li>
                 <li><b>관리용 엑셀(xlsx)</b> — 최종 저장 대상 전체를 <code>이름·연락처·사번/생년월일·권한구분·분류</code> 형식(HanaList 양식)으로 출력합니다.</li>
                 <li><b>까톡오토 양식(xlsx)</b> — 현재 담당 설계사 전체를 GGaTalk 친구등록 양식에 맞춰 출력합니다. (이름 전체를 <code>이름입력</code> 칸에 저장)</li>
+                <li><b>까톡오토 변경목록(xlsx)</b> — 매달 전체를 다시 등록하지 않고 <b>바뀐 담당만</b>(변경·추가·삭제) 까톡오토 <code>변경 목록 반영</code>에 넣는 파일입니다. 개인 연락처는 들어가지 않습니다.</li>
                 <li>업로드 전, 아래 요약을 꼭 확인하세요.</li>
             </ul>
         </div>
@@ -360,6 +362,20 @@
                     <button class="btn btn-primary fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-earmark-excel"></i> 관리용 엑셀 저장</button>
                     <button class="btn btn-warning text-dark fw-bold" onclick="exportKaTalk()"><i class="bi bi-chat-dots-fill"></i> 까톡오토 양식 저장</button>
                     <button class="btn btn-outline-secondary fw-bold" onclick="exportReport()"><i class="bi bi-file-text"></i> 정리 요약 리포트(txt)</button>
+                </div>
+                <div class="alert alert-info border mt-3 mb-0 py-2 mini">
+                    <button class="btn btn-info btn-sm fw-bold me-2" onclick="exportAppFile()"><i class="bi bi-phone"></i> 폰 적용 앱용 파일 저장 (.json)</button>
+                    안드로이드 <b>「연락처 적용」 앱</b> 전용. 폰 연락처를 지우지 않고 <b>그 자리에서</b> 이름·번호·메모·라벨을 고치고,
+                    여기서 <b>삭제로 둔 사람만</b> 지웁니다. 이 파일에 없는 폰 연락처는 건드리지 않습니다.
+                </div>
+                <div class="alert alert-warning border mt-3 mb-0 py-2 mini">
+                    <button class="btn btn-warning btn-sm fw-bold text-dark me-2" onclick="exportKakaoChanges()"><i class="bi bi-arrow-left-right"></i> 까톡오토 변경목록 저장</button>
+                    <b>바뀐 담당만</b>: 이름 바뀐 사람 = <b>변경</b>(소속이 바뀌었으면 기존 그룹 <b>빼기</b>, 개명·표기만이면 <b>유지</b>) · 신규 담당 = <b>추가</b> · 이전담당 = <b>삭제</b>. 호칭은 빈칸(기존 호칭 유지).
+                    <div class="form-check mt-1 mb-0">
+                        <input class="form-check-input" type="checkbox" id="kakaoDelKeptEx" checked>
+                        <label class="form-check-label" for="kakaoDelKeptEx">4단계에서 <b>남긴 이전담당도 까톡오토에서 삭제</b> <span class="text-muted">(관리 메시지를 더 보내지 않을 사람 — 폰 연락처엔 그대로 남음)</span></label>
+                    </div>
+                    <div class="text-muted mt-1">순서: 폰 연락처 적용 → PC 카톡에 새 이름이 보이는지 확인 → 까톡오토 &gt; 친구 관리 &gt; 더보기 &gt; 변경 목록 반영.</div>
                 </div>
                 <div class="form-check mt-3 mb-0">
                     <input class="form-check-input" type="checkbox" id="vcardMemoCheck" checked>
@@ -408,7 +424,9 @@ const STEP_LABELS = ['파일 올리기','분류 결과','담당 이름 정리','
 
 // ===================== 유틸 =====================
 const spinner = (on, txt) => { const s=document.getElementById('spinner'); if(txt) document.getElementById('spinnerText').innerText=txt; s.style.display = on?'flex':'none'; };
-const normPhone = p => (p||'').replace(/[^0-9]/g,'');
+// 숫자만 남기고, 국제표기(+82 10…, 0082 10…)는 국내표기(010…)로 바꾼다 (v1.3.0).
+// 국내 번호는 0으로 시작하므로 '82'로 시작하는 10자리 이상은 국제표기로 본다.
+const normPhone = p => { let d=String(p||'').replace(/[^0-9]/g,''); if(d.startsWith('0082')) d=d.slice(2); if(d.startsWith('82') && d.length>=10) d='0'+d.slice(2); return d; };
 const gnumOf = s => { const m=(s||'').match(/G\d{6,}/i); return m?m[0].toUpperCase():''; };
 function fmtPhone(p){ const d=normPhone(p); if(d.length===11&&d.startsWith('010')) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10&&d.startsWith('01')) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p||''; }
 
@@ -425,6 +443,12 @@ function detectHonorific(oldName, newName){
     // 소속변경 등: 뒤에서부터 호칭 토큰 수집
     let out=[]; for(let i=ot.length-1;i>=0;i--){ if(isHonorToken(ot[i])) out.unshift(ot[i]); else break; }
     return out.join(' ');
+}
+// 소속 = 이름에서 뒤쪽 호칭 토큰과 사람 이름(마지막 토큰)을 뺀 앞부분.  `A+ 강남 김정란 EM` → `A+ 강남`
+function orgPrefix(name){
+    const t=String(name||'').trim().split(/\s+/).filter(Boolean);
+    while(t.length>1 && isHonorToken(t[t.length-1])) t.pop();
+    return t.slice(0,-1).join(' ');
 }
 // 개인 연락처 스팸/기관 의심 판별
 const JUNK_KW = ['인증','문의','고객센터','콜센터','상담','예약','병원','약국','은행','카드사','대출','택배','배송','세무','세금','신고','관리사무소','ARS','스팸','광고','안내','센터','접수','예방접종','주민센터','구청','시청','경찰','소방','우체국'];
@@ -741,8 +765,11 @@ function analyze(){
                 const primaryHon=detectHonorific(primaryOld,newName);
                 let oldBase=primaryOld;
                 if(primaryHon && primaryOld.endsWith(primaryHon)) oldBase=primaryOld.slice(0,-primaryHon.length).trim();
-                const orgChanged = (primaryOld!==newName) && (oldBase!==newName);
-                const withHon = honor? (newName+' '+honor) : newName;
+                // v1.4.0: 이름이 다르다고 다 소속변경이 아니다 — 개명(`이준영→이경태`)·표기(`김기현B→김기현`)는 소속 그대로.
+                //   '사람 이름 앞부분(회사+지점)'이 다를 때만 소속변경. 까톡오토 변경목록의 '기존 그룹 빼기' 판단에 쓰인다.
+                const orgChanged = (primaryOld!==newName) && (oldBase!==newName) && orgPrefix(primaryOld)!==orgPrefix(newName);
+                // 명단 이름이 이미 그 호칭으로 끝나면 또 붙이지 않는다 (v1.3.0 — `민홍철 대표` → `민홍철 대표 대표` 방지)
+                const withHon = (honor && !(' '+newName).endsWith(' '+honor))? (newName+' '+honor) : newName;
                 let choice = honor? 'newhon' : 'new';   // 호칭 있으면 신규+호칭 기본, 없으면 신규
                 S.matched.push({group:g, agent, newName, honor, primaryOld, allOld:g.names.slice(),
                     withHon, orgChanged, choice, custom:''});
@@ -1036,7 +1063,8 @@ function subPhonesOf(e){
     return (e.phones||[]).filter(p=>normPhone(p.num)!==d);
 }
 // Hana연락처백업 양식과 동일한 4컬럼 + 참고용 '분류'·'보조 연락처'
-// ⚠️ Hana 도구(worker.js)는 앞 4컬럼만 읽으므로 뒤에 열을 더해도 되돌려 넣는 데 문제 없다.
+// ⚠️ Hana 도구(worker.js)는 앞 4컬럼 + 제목이 '성명/사번/대리점/지점'인 열만 읽는다(v1.5.0).
+//    '분류'·'보조 연락처'는 그 제목이 아니므로 되돌려 넣어도 무시된다 — 이 두 열 제목을 위 넷 중 하나로 바꾸지 말 것.
 function writeExcelBackup(entries, fnamePrefix){
     if(!entries.length){ alert('저장할 연락처가 없습니다.'); return; }
     const aoa=[['임시저장이름','연락처','사번/생년월일-코드','권한구분','분류','보조 연락처']];
@@ -1163,6 +1191,179 @@ function exportKaTalk(){
     XLSX.writeFile(buildKakaoWorkbook(names), `까톡오토_친구등록_${names.length}명_${stamp()}.xlsx`);
 }
 
+// ===================== 내보내기: 까톡오토 변경목록 (v1.4.0) =====================
+// 까톡오토 > 친구 관리 > 더보기 > 변경 목록 반영 에 넣는 파일. 양식 = `까톡오토_변경목록_양식.xlsx` (시트 변경목록·작성방법).
+// 매달 전체를 다시 등록하지 않고 **바뀐 사람만** 반영한다. 담당 기준만(개인 연락처 제외).
+//   변경 = 계속 담당 & 최종 이름 ≠ 구글 원래 이름.  기존 그룹: 소속(회사+지점)이 바뀌었으면 '빼기', 개명·표기만 바뀌었으면 '유지'.
+//   추가 = 신규 담당.
+//   삭제 = 이전담당. 4단계에서 '남김'으로 둔 사람도 기본은 삭제(관리 메시지를 더 보내지 않을 사람) — ⑥의 체크로 바꿀 수 있다.
+//   호칭 = 빈칸(= 까톡오토가 기존 호칭 유지).
+// ⚠️ 까톡오토는 '기존 이름'이 친구 목록에 없으면 자체 조치(미리보기에서 표시)를 하므로 여기선 구글 원래 이름을 그대로 쓴다.
+// ⚠️ SheetJS 무료판은 서식·드롭다운을 못 쓴다 → 양식과 같은 xlsx를 XML로 직접 조립해 SheetJS 내장 CFB로 zip한다.
+const APP_VER = 'v1.5.0';   // ⚠️ 제목·배지와 같이 올릴 것
+const KAKAO_NAME_MAX = 20;
+function buildKakaoChangeRows(delKeptEx){
+    const byName=(i)=>(a,b)=>a[i]<b[i]?-1:a[i]>b[i]?1:0;
+    const chg=[], add=[], del=[];
+    S.matched.forEach(m=>{
+        const fin=finalMatchedName(m);
+        if(!fin || fin===m.primaryOld) return;
+        chg.push(['변경', m.primaryOld, fin, '', m.orgChanged?'빼기':'유지', m.orgChanged?'소속이동':'이름변경(소속 그대로)', fmtPhone(m.group.phoneRaw)]);
+    });
+    S.brandNew.forEach(a=>{ if(a.name) add.push(['추가', '', a.name, '', '', '신규 담당', fmtPhone(a.phone)]); });
+    S.ex.forEach(e=>{
+        if(!e.name || (e.keep && !delKeptEx)) return;
+        del.push(['삭제', e.name, '', '', '', e.keep?'이전담당 (폰엔 남김)':'이전담당', fmtPhone(e.group.phoneRaw)]);
+    });
+    return { chg:chg.sort(byName(1)), add:add.sort(byName(2)), del:del.sort(byName(1)) };
+}
+// 반영 전 점검: 20자 초과 / 반영 후 이름 겹침 / 같은 파일 안 이어지는 변경(알림만)
+function checkKakaoChangeRows(r){
+    const warn=[];
+    [...r.chg, ...r.add].forEach(x=>{ if([...x[2]].length>KAKAO_NAME_MAX) warn.push(`20자 초과: ${x[2]} (${[...x[2]].length}자)`); });
+    const after=new Map();
+    S.matched.forEach(m=>{ const n=finalMatchedName(m); after.set(n,(after.get(n)||0)+1); });
+    S.brandNew.forEach(a=>after.set(a.name,(after.get(a.name)||0)+1));
+    after.forEach((c,n)=>{ if(n && c>1) warn.push(`반영 후 같은 이름 ${c}명: ${n}`); });
+    const olds=new Set([...r.chg.map(x=>x[1]), ...r.del.map(x=>x[1])]);
+    const info=[...r.chg, ...r.add].filter(x=>olds.has(x[2])).map(x=>`이어지는 변경: ${x[1]||'(추가)'} → ${x[2]}  (같은 이름이 이 파일에서 바뀌거나 삭제됨 — 까톡오토가 처리)`);
+    return {warn, info};
+}
+function kakaoChangeXlsx(rows){
+    const xe=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const COLS='ABCDEFG';
+    const rowXml=(r,cells,s)=>`<row r="${r}">`+cells.map((v,j)=>`<c r="${COLS[j]}${r}" t="inlineStr" s="${Array.isArray(s)?s[j]:s}"><is><t xml:space="preserve">${xe(v)}</t></is></c>`).join('')+'</row>';
+    const head=['구분','기존 이름','새 이름','호칭','기존 그룹','사유 (참고)','전화 (참고)'];
+    const last=rows.length+1;
+    const XH='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const sheet1=XH+`<worksheet xmlns="${NS}"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`+
+        '<cols><col min="1" max="1" width="9" customWidth="1"/><col min="2" max="3" width="34" customWidth="1"/><col min="4" max="4" width="12" customWidth="1"/><col min="5" max="5" width="11" customWidth="1"/><col min="6" max="6" width="22" customWidth="1"/><col min="7" max="7" width="15" customWidth="1"/></cols>'+
+        '<sheetData>'+rowXml(1,head,[1,1,1,1,1,4,4])+rows.map((x,i)=>rowXml(i+2,x,[2,2,2,2,2,5,5])).join('')+'</sheetData>'+
+        `<autoFilter ref="A1:G${last}"/><dataValidations count="2">`+
+        '<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="구분" error="변경 / 추가 / 삭제 중 하나를 고르세요" sqref="A2:A2000"><formula1>"변경,추가,삭제"</formula1></dataValidation>'+
+        '<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="기존 그룹" error="빼기 / 유지 중 하나를 고르세요 (빈칸=유지)" sqref="E2:E2000"><formula1>"빼기,유지"</formula1></dataValidation>'+
+        '</dataValidations></worksheet>';
+    // 작성방법 시트 — 양식 문구 그대로 + 이 파일 설명
+    const guide=[['까톡오토 — 변경 목록 작성 방법','',3],['','',2],['열','설명',1],
+        ['구분','변경 / 추가 / 삭제.  빈칸이면 자동 판정 (기존+새 이름 = 변경, 새 이름만 = 추가).  ★삭제는 반드시 "삭제"라고 적은 줄만 지웁니다.',2],
+        ['기존 이름','지금 까톡오토(=PC 카톡)에 저장된 이름과 글자 하나까지 똑같이.  변경·삭제 줄에 필요.',2],
+        ['새 이름','바뀐 뒤 이름 (직급 포함, PC 카톡에 보이는 그대로).  변경·추가 줄에 필요.  20자 이내.',2],
+        ['호칭','메시지의 {호칭} 자리에 들어갈 말 (예: 상무님).  변경 줄에서 빈칸 = 기존 호칭 그대로.',2],
+        ['기존 그룹','변경 줄 전용.  빼기 = 지금 들어가 있는 그룹에서 모두 빠짐 (조직 이동)  /  유지 또는 빈칸 = 그대로 (개명·직급 변경).',2],
+        ['','',2],['처리 순서','',1],
+        ['1','PC 카톡에서 새 이름이 보이는지 먼저 확인 (휴대폰 연락처 수정 → 카톡 반영).',2],
+        ['2','까톡오토 > 친구 관리 > 더보기 > 변경 목록 반영 → 이 파일 넣기 → 미리보기 확인 → 반영.',2],
+        ['3','그룹에서 뺀 사람과 새로 추가한 사람은 [그룹 자동분류]로 새 소속에 배정.',2],
+        ['','',2],
+        ['참고','열 순서는 상관없고, 제목(1행)으로 찾습니다.  전화번호 등 다른 열이 더 있어도 무시합니다.',2],
+        ['참고','같은 파일 안에서 A→B, B→C 처럼 이어지는 변경도 됩니다 (모두 바뀐 뒤 기준으로 겹침 검사).',2],
+        ['참고','반영 직전에 되돌리기 파일이 자동 저장됩니다.',2],
+        ['','',2],
+        ['이 파일','구글 연락처 정리 도우미 '+APP_VER+'에서 '+stamp()+'에 만듦.  사유·전화 열은 확인용(까톡오토는 무시).',2]];
+    const sheet2=XH+`<worksheet xmlns="${NS}"><cols><col min="1" max="1" width="14" customWidth="1"/><col min="2" max="2" width="110" customWidth="1"/></cols><sheetData>`+
+        guide.map((g,i)=>rowXml(i+1,[g[0],g[1]],g[2]===3?[3,0]:g[2])).join('')+'</sheetData></worksheet>';
+    const styles=XH+`<styleSheet xmlns="${NS}"><fonts count="4"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/></font><font><b/><sz val="14"/><name val="맑은 고딕"/></font><font><sz val="10"/><color rgb="FF868E96"/><name val="맑은 고딕"/></font></fonts>`+
+        '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F6FB0"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF868E96"/><bgColor indexed="64"/></patternFill></fill></fills>'+
+        '<borders count="2"><border/><border><left style="thin"><color rgb="FFD0D0D0"/></left><right style="thin"><color rgb="FFD0D0D0"/></right><top style="thin"><color rgb="FFD0D0D0"/></top><bottom style="thin"><color rgb="FFD0D0D0"/></bottom><diagonal/></border></borders>'+
+        '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6">'+
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+
+        '<xf numFmtId="49" fontId="1" fillId="2" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+        '<xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>'+
+        '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'+
+        '<xf numFmtId="49" fontId="1" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+        '<xf numFmtId="49" fontId="3" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'+
+        '</cellXfs></styleSheet>';
+    const R='http://schemas.openxmlformats.org/officeDocument/2006/relationships', PR='http://schemas.openxmlformats.org/package/2006/relationships';
+    const CT='application/vnd.openxmlformats-officedocument.spreadsheetml.';
+    const parts={
+        '[Content_Types].xml': XH+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+
+            `<Override PartName="/xl/workbook.xml" ContentType="${CT}sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="${CT}worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="${CT}worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="${CT}styles+xml"/></Types>`,
+        '_rels/.rels': XH+`<Relationships xmlns="${PR}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+        'xl/workbook.xml': XH+`<workbook xmlns="${NS}" xmlns:r="${R}"><sheets><sheet name="변경목록" sheetId="1" r:id="rId1"/><sheet name="작성방법" sheetId="2" r:id="rId2"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">변경목록!$A$1:$G$${last}</definedName></definedNames></workbook>`,
+        'xl/_rels/workbook.xml.rels': XH+`<Relationships xmlns="${PR}"><Relationship Id="rId1" Type="${R}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${R}/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="${R}/styles" Target="styles.xml"/></Relationships>`,
+        'xl/worksheets/sheet1.xml': sheet1, 'xl/worksheets/sheet2.xml': sheet2, 'xl/styles.xml': styles };
+    const CFB=XLSX.CFB, zip=CFB.utils.cfb_new(), enc=new TextEncoder();
+    Object.keys(parts).forEach(p=>CFB.utils.cfb_add(zip, p, enc.encode(parts[p])));
+    return CFB.write(zip, {type:'array', fileType:'zip', compression:true});
+}
+function exportKakaoChanges(){
+    const cb=document.getElementById('kakaoDelKeptEx');
+    const delKeptEx = cb? cb.checked : true;
+    const r=buildKakaoChangeRows(delKeptEx);
+    const rows=[...r.chg, ...r.add, ...r.del];
+    if(!rows.length){ alert('까톡오토에 반영할 변경이 없습니다.'); return; }
+    const chk=checkKakaoChangeRows(r);
+    const keptEx=S.ex.filter(e=>e.keep).length;
+    let msg=`까톡오토 변경목록 ${rows.length}건\n\n· 변경 ${r.chg.length}  (소속이동 ${r.chg.filter(x=>x[4]==='빼기').length} → 기존 그룹 빼기 / 이름만 변경 ${r.chg.filter(x=>x[4]==='유지').length} → 유지)\n· 추가 ${r.add.length}\n· 삭제 ${r.del.length}`+
+        (keptEx? `  (4단계에서 남긴 이전담당 ${keptEx}명 ${delKeptEx?'포함':'제외'})` : '');
+    if(chk.warn.length) msg+=`\n\n⚠️ 확인 필요 ${chk.warn.length}건\n`+chk.warn.slice(0,10).join('\n')+(chk.warn.length>10?`\n… 외 ${chk.warn.length-10}건`:'');
+    if(chk.info.length) msg+=`\n\nℹ️ 참고 ${chk.info.length}건\n`+chk.info.slice(0,5).join('\n')+(chk.info.length>5?`\n… 외 ${chk.info.length-5}건`:'');
+    msg+='\n\n저장할까요?';
+    if(!confirm(msg)) return;
+    const data=kakaoChangeXlsx(rows);
+    saveAs(new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), `까톡오토_변경목록_${rows.length}건_${stamp()}.xlsx`);
+}
+
+// ===================== 내보내기: 폰 적용 앱용 파일 (v1.3.0) =====================
+// 안드로이드 앱 "연락처 적용"이 읽는 파일. vCard와 달리 **최종 상태 + 지울 사람 명단 + 대조용 옛 번호**를 함께 담는다.
+//   - set: 이 모습으로 맞춘다 (이름·번호·메모·라벨). 폰에 없으면 새로 추가.
+//   - del: 지운다 (예전담당/개인 중 '삭제'로 둔 사람).
+//   - match: 폰 연락처를 찾을 때 쓰는 번호 = 구글 백업 당시 번호 전부 + 새 번호. (번호가 바뀐 사람도 옛 번호로 찾는다)
+// ⚠️ 이 파일에 아예 없는 폰 연락처(백업 이후 새로 저장한 사람 등)는 앱이 **건드리지 않는다**. 삭제는 del 명단만.
+const APP_LABELS = ['설계사','이전담당','개인'];
+function appPhones(list){ return (list||[]).filter(p=>p&&p.num&&normPhone(p.num)).map(p=>({n:p.num, m:isMobileNumber(p.num)})); }
+function appMatch(...lists){
+    const out=[], seen=new Set();
+    lists.forEach(L=>(L||[]).forEach(p=>{ const num=p&&(p.num||p.n); const d=normPhone(num); if(d&&!seen.has(d)){ seen.add(d); out.push(num); } }));
+    return out;
+}
+function buildAppItems(){
+    const items=[];
+    S.matched.forEach(m=>{
+        const g=m.group, a=m.agent, flags=[];
+        const groupHasAgent = a.phoneKey && (g.phones||[]).some(p=>normPhone(p.num)===a.phoneKey);
+        let phones;
+        if(a.phoneKey && !groupHasAgent){
+            // 사번으로 찾았는데 구글 번호에 명단 번호가 없음 = 휴대폰 번호가 바뀐 사람.
+            // 명단(최신) 번호를 대표로, 옛 휴대폰은 빼고 내선·유선만 남긴다.
+            phones=[{num:a.phone,label:'Mobile'}].concat((g.phones||[]).filter(p=>!isMobileNumber(p.num)));
+            flags.push('번호변경');
+        } else if(a.phoneKey){
+            phones=orderPhones(g.phones, a.phone);   // 명단 번호를 맨 앞(대표)으로
+        } else {
+            phones=orderPhones(g.phones, g.phoneRaw);
+        }
+        const fin=finalMatchedName(m);
+        if(m.orgChanged) flags.push('소속변경');
+        if(fin!==m.primaryOld) flags.push('이름변경');
+        items.push({k:'set', cat:'설계사', name:fin, oldNames:g.names.slice(), phones:appPhones(phones),
+            match:appMatch(g.phones, phones), note:(a.id||g.notes||''), flags});
+    });
+    S.brandNew.forEach(a=>{
+        const phones=a.phone?[{num:a.phone,label:'Mobile'}]:[];
+        items.push({k:'set', cat:'설계사', name:a.name, oldNames:[], phones:appPhones(phones), match:appMatch(phones), note:(a.id||''), flags:['신규']});
+    });
+    const grp=(x,cat)=>{
+        const g=x.group, phones=orderPhones(g.phones, g.phoneRaw);
+        const name=x.name||g.names[0]||'';
+        if(x.keep) items.push({k:'set', cat, name, oldNames:g.names.slice(), phones:appPhones(phones), match:appMatch(phones), note:(g.notes||''), flags:[]});
+        else items.push({k:'del', cat, name, oldNames:g.names.slice(), phones:appPhones(phones), match:appMatch(phones), note:'', flags:[]});
+    };
+    S.ex.forEach(e=>grp(e,'이전담당'));
+    S.per.forEach(p=>grp(p,'개인'));
+    return items;
+}
+function exportAppFile(){
+    if(!analyzed){ alert('먼저 분석을 실행하세요.'); return; }
+    const items=buildAppItems();
+    if(!items.length){ alert('저장할 연락처가 없습니다.'); return; }
+    const nSet=items.filter(x=>x.k==='set').length, nDel=items.length-nSet;
+    const doc={format:'hana-contact-apply', version:1, created:stamp(), tool:'google.html '+APP_VER,
+        labels:APP_LABELS, counts:{set:nSet, del:nDel}, items};
+    const blob=new Blob([JSON.stringify(doc)], {type:'application/json;charset=utf-8'});
+    saveAs(blob, `폰적용_${nSet}명유지_${nDel}명삭제_${stamp()}.json`);
+}
+
 // ===================== 내보내기: 요약 리포트 =====================
 function exportReport(){
     const exKeep=S.ex.filter(e=>e.keep), perKeep=S.per.filter(p=>p.keep);
@@ -1176,8 +1377,10 @@ function exportReport(){
     L.push(`  개인 연락처: 총 ${S.per.length} / 남김 ${perKeep.length} / 삭제 ${S.per.length-perKeep.length}`);
     L.push(`  ── 최종 저장: ${S.matched.length+S.brandNew.length+exKeep.length+perKeep.length}`);
     L.push('');
-    L.push('[호칭 정리 — 기존 → 최종]');
-    S.matched.forEach(m=>{ const f=finalMatchedName(m); if(f!==m.primaryOld) L.push(`  ${m.primaryOld}  →  ${f}`); });
+    L.push('[이름 변경 — 기존 → 최종]  (소속이동 = 까톡오토 기존 그룹 빼기)');
+    S.matched.forEach(m=>{ const f=finalMatchedName(m); if(f!==m.primaryOld) L.push(`  ${m.primaryOld}  →  ${f}${m.orgChanged?'   [소속이동]':''}`); });
+    { const cb=document.getElementById('kakaoDelKeptEx'); const r=buildKakaoChangeRows(cb?cb.checked:true);
+      L.push(''); L.push(`[까톡오토 변경목록]  변경 ${r.chg.length} (그룹 빼기 ${r.chg.filter(x=>x[4]==='빼기').length}) · 추가 ${r.add.length} · 삭제 ${r.del.length}`); }
     L.push('');
     L.push('[이전담당 · 남김]'); exKeep.forEach(e=>L.push('  '+e.name+'  '+fmtPhone(e.group.phoneRaw)));
     L.push(''); L.push('[개인 · 남김]'); perKeep.forEach(p=>L.push('  '+p.name+'  '+fmtPhone(p.group.phoneRaw)));
