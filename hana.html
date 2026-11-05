@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hana 연락처 정리 도우미 v1.5.1</title>
+    <title>Hana 연락처 정리 도우미 v1.6.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <!-- 스타일(셀 배경색/글자색) 지원용 SheetJS 포크. 메인 XLSX(0.20.0)는 그대로 두고 별도 네임스페이스(XLSXStyle)로 격리 -->
     <script>window.__origXLSX = window.XLSX;</script>
@@ -17,262 +18,428 @@
     <script src="./admin-core.js?v=1.2.9"></script>
 
     <style>
-        body { background-color: #f4f6f9; font-family: 'Malgun Gothic', sans-serif; }
-        .card-header { font-weight: bold; background-color: #e9ecef; }
-        .dropzone { border: 3px dashed #0d6efd; border-radius: 10px; background-color: #f8f9fa; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .dropzone.dragover { background-color: #e2eefd; border-color: #0a58ca; transform: scale(1.01); }
-        .dropzone-icon { font-size: 2.5rem; color: #0d6efd; margin-bottom: 10px; }
-        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 9999; justify-content: center; align-items: center; color: white; flex-direction: column; }
-        .table-scroll-area { max-height: 600px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; }
-        .table-scroll-area thead th { position: sticky; top: 0; z-index: 1; background-color: #f8f9fa; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .tool-bar { background-color: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #0d6efd; }
-        .toast-status { opacity: 0; transition: opacity 0.3s ease-in-out; font-weight: bold; }
-        .toast-status.show { opacity: 1; }
-        .clear-btn { cursor: pointer; color: #6c757d; pointer-events: auto !important; }
-        .clear-btn:hover { color: #dc3545; }
-        .table-hover tbody tr:hover { background-color: #eef2f5; cursor: pointer; }
+        /* v1.6.0 화면 개편 — 까톡오토 디자인 규칙 (폰 앱 「연락처 적용」과 같은 색·글꼴)
+           · 한 화면 = 한 단계 (① 명단 열기 → ② 정리하기 → ③ 내려받기)
+           · 그 화면의 '다음으로 가는 버튼' 1개만 노랑 크게, 나머지는 흰 바탕 테두리
+           · 쉬운 말, 부가 기능은 오른쪽 위 ⋮ 메뉴로 */
+        :root { --active-color:#f7e600; --active-dark:#e0d000; --active-text:#3c1e1e; --soft:#fffde7; --soft-line:#f1e48a; --border-color:#e9ecef; }
+        html, body { background:#f4f6f8; }
+        body { font-family:'Pretendard Variable','Pretendard','Malgun Gothic',sans-serif; color:#222; letter-spacing:-0.02em; word-break:keep-all; padding-bottom:110px; }
+
+        /* 위 제목줄 */
+        .topbar { position:sticky; top:0; z-index:1030; background:#fff; border-bottom:1px solid var(--border-color); padding:10px 20px; display:flex; align-items:center; gap:14px; }
+        .brand { font-size:1.2rem; font-weight:900; color:var(--active-text); white-space:nowrap; }
+        .brand i { color:#d4a017; }
+        .ver { font-size:.75rem; color:#999; font-weight:600; margin-left:6px; }
+        .ghost-btn { border:1.5px solid #d5d9de; background:#fff; color:#555; border-radius:10px; padding:6px 12px; font-weight:700; font-size:.92rem; text-decoration:none; white-space:nowrap; }
+        .ghost-btn:hover { background:#f8f9fa; color:#333; }
+        .stepper { display:flex; align-items:center; gap:6px; margin:0 auto; }
+        .stp { display:flex; align-items:center; gap:8px; border:none; background:transparent; padding:6px 10px; border-radius:20px; color:#aaa; font-weight:700; font-size:.98rem; }
+        .stp .n { width:28px; height:28px; border-radius:50%; background:#eef0f2; color:#999; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:.9rem; }
+        .stp.on { color:var(--active-text); }
+        .stp.on .n { background:var(--active-color); color:var(--active-text); }
+        .stp.done { color:#666; cursor:pointer; }
+        .stp.done .n { background:#e7f7ec; color:#15803d; }
+        .stp.done:hover { background:#f8f9fa; }
+        .stp.ahead { color:#666; cursor:pointer; }
+        .stp.ahead:hover { background:#f8f9fa; }
+        .stp:disabled { cursor:default; }
+        .stp-line { width:28px; height:2px; background:#e3e5e8; }
+        .menu-wrap { position:relative; }
+        .menu-btn { width:42px; height:42px; border-radius:50%; border:none; background:transparent; font-size:1.35rem; color:#555; }
+        .menu-btn:hover { background:#f1f3f5; }
+        .menu { position:absolute; right:0; top:48px; background:#fff; border:1px solid var(--border-color); border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,.12); min-width:250px; display:none; overflow:hidden; z-index:1040; }
+        .menu.open { display:block; }
+        .menu button { display:flex; gap:12px; align-items:center; width:100%; border:none; background:#fff; padding:14px 18px; font-size:1rem; text-align:left; color:#333; border-bottom:1px solid #f3f3f3; }
+        .menu button:last-child { border-bottom:0; }
+        .menu button:hover { background:#FFFBE0; }
+        .menu button i { color:#888; font-size:1.1rem; }
+
+        /* 단계 제목 */
+        .page { max-width:1400px; margin:0 auto; padding:22px 20px 0; }
+        .page.narrow { max-width:820px; }
+        .view { display:none; animation:fadeIn .25s ease-in-out; }
+        .view.active { display:block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .step { display:flex; gap:12px; align-items:center; margin:4px 0 14px; }
+        .step-no { flex-shrink:0; width:38px; height:38px; border-radius:50%; background:var(--active-color); color:var(--active-text); font-weight:900; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+        .step-t { font-weight:800; color:var(--active-text); font-size:1.45rem; line-height:1.3; }
+        .lead-t { color:#666; font-size:1.02rem; line-height:1.6; margin:-4px 0 18px; }
+        .custom-card { background:#fff; border:1px solid var(--border-color); border-radius:16px; padding:22px; box-shadow:0 4px 20px rgba(0,0,0,.03); margin-bottom:16px; }
+        .f-label { font-weight:800; color:var(--active-text); font-size:1.05rem; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+        .f-label .opt { font-weight:600; color:#999; font-size:.88rem; }
+        .f-help { color:#888; font-size:.9rem; margin-top:6px; }
+        .form-control, .form-select { border-radius:10px; border:1.5px solid #dfe3e7; font-size:1rem; }
+        .form-control:focus, .form-select:focus { border-color:#e0c800; box-shadow:0 0 0 .2rem rgba(247,230,0,.25); }
+        .form-check-input:checked { background-color:#d4a017; border-color:#d4a017; }
+        .form-check-input:focus { box-shadow:0 0 0 .2rem rgba(247,230,0,.3); border-color:#e0c800; }
+
+        /* 버튼 */
+        .btn-confirm { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--active-color); color:var(--active-text); border:none; padding:15px 28px; border-radius:14px; font-weight:800; font-size:1.15rem; transition:background .15s; }
+        .btn-confirm:hover { background:var(--active-dark); }
+        .btn-confirm:disabled { background:#e9ecef; color:#aaa; }
+        .btn-confirm.block { display:flex; width:100%; }
+        .btn-line { display:inline-flex; align-items:center; justify-content:center; gap:6px; background:#fff; color:var(--active-text); border:1.5px solid #d5d9de; padding:8px 14px; border-radius:11px; font-weight:700; font-size:.97rem; white-space:nowrap; }
+        .btn-line:hover { background:#f8f9fa; }
+        .btn-line:disabled { color:#bbb; background:#fafafa; }
+        .btn-line.sm { padding:6px 11px; font-size:.92rem; border-radius:10px; }
+        .btn-line.y { background:var(--soft); border-color:#e0c800; }
+        .btn-line.y:hover { background:#fff7b8; }
+        .btn-line.red { color:#c92a2a; border-color:#f1aeb5; }
+        .btn-line.red:hover { background:#fff5f5; }
+        .link-btn { background:none; border:none; color:#7a6a00; text-decoration:underline; font-size:.98rem; padding:6px 2px; }
+
+        /* ① 파일 놓는 곳 */
+        .dropzone { border:2.5px dashed #e0c800; border-radius:16px; background:#fffef3; padding:34px 20px; text-align:center; cursor:pointer; transition:all .2s ease; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+        .dropzone:hover { background:var(--soft); }
+        .dropzone.dragover { background:#fff7b8; border-color:#d4a017; transform:scale(1.01); }
+        .dropzone-icon { font-size:2.6rem; color:#d4a017; margin-bottom:8px; }
+        .dropzone h4 { font-weight:800; color:var(--active-text); font-size:1.15rem; }
+        .dropzone.ok { border-style:solid; border-color:#8fd19e; background:#f3fbf5; }
+        .dropzone.ok .dropzone-icon, .dropzone.ok h4 { color:#15803d; }
+        .soft-box { background:var(--soft); border:1px solid var(--soft-line); border-radius:12px; padding:12px 14px; color:#6b5900; font-size:.95rem; line-height:1.55; }
+
+        /* ② 정리하기 */
+        .tool-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; margin-bottom:16px; }
+        @media (min-width:900px) { .tool-grid { grid-template-columns:1fr 1fr; } }
+        @media (min-width:1500px) { .tool-grid { grid-template-columns:1fr 1.3fr 1fr 1fr; } }
+        .tool-t { white-space:nowrap; }
+        .tool-t .sub { overflow:hidden; text-overflow:ellipsis; }
+        .tool { background:#fff; border:1px solid var(--border-color); border-radius:16px; padding:16px 18px; box-shadow:0 4px 15px rgba(0,0,0,.02); }
+        .tool-t { font-weight:800; color:var(--active-text); font-size:1.02rem; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+        .tool-t i { color:#d4a017; }
+        .tool-t .sub { font-weight:500; color:#999; font-size:.85rem; }
+        .tool .row-in { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; }
+        .tool .row-in .grow { flex:1 1 0; min-width:0; }
+        .tool-t .right { margin-left:auto; font-weight:600; font-size:.88rem; color:#666; }
+        .tool .row-in .form-control, .tool .row-in .form-select { font-size:.95rem; padding:6px 10px; }
+        .hint-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:#EEF4FF; border:1px solid #c5d5fb; border-radius:14px; padding:14px 18px; margin-bottom:16px; color:#2b3f8f; }
+        .hint-bar i.lead-ic { font-size:1.5rem; color:#3b5bdb; }
+        .hint-bar .t { font-weight:800; }
+        .hint-bar .d { font-size:.92rem; color:#4a5a9a; }
+
+        /* 보기(필터) 탭 */
+        .seg { display:flex; flex-wrap:wrap; gap:6px; }
+        .seg input { display:none; }
+        .seg label { border:1.5px solid #dfe3e7; background:#fff; color:#555; border-radius:22px; padding:7px 14px; font-weight:700; font-size:.94rem; cursor:pointer; user-select:none; display:flex; align-items:center; gap:6px; }
+        .seg label:hover { background:#fafafa; }
+        .seg input:checked + label { background:var(--active-color); border-color:var(--active-color); color:var(--active-text); }
+        .cnt { border-radius:10px; padding:1px 7px; font-size:.78rem; font-weight:800; }
+        .cnt.red { background:#ffe3e3; color:#c92a2a; } .cnt.blue { background:#e3f2fd; color:#1565c0; }
+
+        .list-card { background:#fff; border:1px solid var(--border-color); border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.03); overflow:hidden; }
+        .list-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid #f0f0f0; }
+        .search-box { position:relative; flex:0 1 320px; }
+        .search-box i.bi-search { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; }
+        .search-box input { padding-left:36px; padding-right:34px; }
+        .search-box .clear-btn { position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#aaa; }
+        .search-box .clear-btn:hover { color:#c92a2a; }
+        .table-scroll-area { max-height:62vh; overflow-y:auto; }
+        .table-scroll-area table { font-size:.97rem; }
+        .table-scroll-area thead th { position:sticky; top:0; z-index:1; background:#fafbfc; color:#666; font-weight:700; border-bottom:1px solid #e9ecef; padding:10px 6px; }
+        .table-scroll-area td { padding:9px 6px; border-color:#f3f3f3; }
+        .table-hover tbody tr:hover { background-color:#fffbe0; cursor:pointer; }
+        .table-hover tbody tr:hover > * { --bs-table-accent-bg:transparent; }
+
+        #dupNameActionBar { background:#fff8e6; border-bottom:1px solid #ffe0b2; padding:12px 18px; }
+
+        /* 아래 고정줄 */
+        .bottom-bar { position:fixed; left:0; right:0; bottom:0; z-index:1020; background:rgba(244,246,248,.97); padding:12px 20px 14px; box-shadow:0 -6px 18px rgba(0,0,0,.05); display:none; }
+        .bottom-bar.show { display:block; }
+        .bottom-bar .inner { max-width:1400px; margin:0 auto; display:flex; align-items:center; gap:12px; }
+        .bottom-bar .cnt-t { font-weight:800; color:var(--active-text); font-size:1.05rem; }
+        .bottom-bar .cnt-t .sel { color:#b08900; }
+        .toast-status { opacity:0; transition:opacity .3s ease-in-out; font-weight:700; }
+        .toast-status.show { opacity:1; }
+
+        /* ③ 내려받기 */
+        .dl-main { text-align:center; padding:30px 22px; }
+        .dl-ic { width:84px; height:84px; border-radius:24px; background:var(--soft); border:2px solid var(--active-color); display:flex; align-items:center; justify-content:center; font-size:2.4rem; color:#d4a017; margin:0 auto 16px; }
+        .big-n { font-size:2rem; font-weight:900; color:var(--active-text); }
+        .dl-sub { display:flex; gap:14px; align-items:center; }
+        .dl-sub .ic { width:48px; height:48px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; }
+        .dl-sub .t { font-weight:800; color:var(--active-text); }
+        .dl-sub .d { color:#888; font-size:.9rem; }
+
+        /* 진행 중 가림막 */
+        .spinner-overlay { position:fixed; inset:0; background:rgba(244,246,248,.94); display:none; z-index:9999; justify-content:center; align-items:center; color:#555; flex-direction:column; }
+        .spin { width:64px; height:64px; border:6px solid #e9ecef; border-top-color:var(--active-color); border-radius:50%; animation:sp 1s linear infinite; margin-bottom:22px; }
+        @keyframes sp { to { transform:rotate(360deg); } }
+        #loadingText { font-weight:800; color:var(--active-text); font-size:1.3rem; }
+        .spinner-overlay .progress { height:14px; border-radius:8px; background:#e9ecef; }
+        .spinner-overlay .progress-bar { background:var(--active-color); color:var(--active-text); font-size:.75rem; font-weight:800; }
+        #loadingProgressText { color:#777; font-size:1rem; }
+
+        /* 대화상자(부트스트랩 모달)도 같은 느낌으로 */
+        .modal-content { border:none !important; border-radius:18px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.2) !important; }
+        .modal-header { background:#fff !important; color:var(--active-text) !important; border-bottom:1px solid #f0f0f0; }
+        .modal-header .btn-close-white { filter:none; }
+        .modal-title { font-weight:900 !important; }
+        .modal-title i { color:#d4a017; }
+        .modal-footer { background:#fafbfc !important; border-top:1px solid #f0f0f0; }
+        .modal .btn { border-radius:11px; font-weight:700; }
+        .modal .btn-primary, .modal .btn-info, .modal .btn-dark { background:var(--active-color) !important; border-color:var(--active-color) !important; color:var(--active-text) !important; }
+        .modal .btn-primary:hover, .modal .btn-info:hover, .modal .btn-dark:hover { background:var(--active-dark) !important; }
+        .modal .btn-secondary { background:#fff; color:#555; border:1.5px solid #d5d9de; }
+
+        /* 같은 사람 합치기 */
+        .mg-card { border:1.5px solid var(--border-color); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+        .mg-card.off { opacity:.5; }
+        .mg-name { font-weight:800; font-size:1.08rem; color:var(--active-text); }
+        .mg-sub { color:#888; font-size:.9rem; }
+        .mg-opt { display:flex; align-items:center; gap:10px; border:1.5px solid #eef0f2; border-radius:11px; padding:10px 12px; margin-top:8px; cursor:pointer; }
+        .mg-opt.on { border-color:#e0c800; background:var(--soft); }
+        .mg-opt .ph { font-weight:800; font-size:1.05rem; min-width:140px; }
+        .mg-opt .em { color:#555; font-size:.93rem; }
+        .mg-opt .tag { font-size:.78rem; font-weight:800; border-radius:8px; padding:2px 8px; background:#eef0f2; color:#666; margin-left:auto; white-space:nowrap; }
+        .mg-opt.on .tag { background:var(--active-color); color:var(--active-text); }
+
+        /* 관리자 화면 */
+        #adminPanel .card { border-radius:16px; overflow:hidden; }
     </style>
 </head>
 <body>
 
-<a href="index.html" class="btn btn-outline-secondary btn-sm shadow-sm"
-   style="position:fixed; top:12px; left:12px; z-index:10000; font-weight:bold;"
-   title="도구 선택 화면으로 돌아가기">
-   <i class="bi bi-grid-3x3-gap-fill"></i> 도구 선택
-</a>
+<header class="topbar">
+    <a href="index.html" class="ghost-btn" title="도구 선택 화면으로 돌아가기"><i class="bi bi-grid-3x3-gap-fill"></i> 도구 선택</a>
+    <div class="brand"><i class="bi bi-person-lines-fill"></i> Hana 연락처 정리 도우미<span class="ver" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.6.0 · 261105</span></div>
+    <nav class="stepper" id="stepper">
+        <button class="stp on" id="stp1" onclick="goStep(1)"><span class="n">1</span>명단 열기</button>
+        <span class="stp-line"></span>
+        <button class="stp" id="stp2" onclick="goStep(2)" disabled><span class="n">2</span>정리하기</button>
+        <span class="stp-line"></span>
+        <button class="stp" id="stp3" onclick="goStep(3)" disabled><span class="n">3</span>내려받기</button>
+    </nav>
+    <div class="menu-wrap">
+        <button class="menu-btn" onclick="toggleMenu(event)" title="메뉴"><i class="bi bi-three-dots-vertical"></i></button>
+        <div class="menu" id="topMenu">
+            <button onclick="restartAll()"><i class="bi bi-arrow-counterclockwise"></i> 처음부터 다시 (명단 다시 열기)</button>
+            <button onclick="openVcfGuideModal()" class="need-data"><i class="bi bi-phone-vibrate"></i> 폰 연락처와 겹치는 사람 찾기</button>
+            <button onclick="openPatternSaveModal()" class="need-data"><i class="bi bi-download"></i> 내 정리 규칙 파일로 저장</button>
+            <button id="btnAdminLogin" onclick="openAdminLoginModal()"><i class="bi bi-shield-lock-fill"></i> 슈퍼관리자</button>
+        </div>
+    </div>
+</header>
 
 <div class="spinner-overlay" id="loadingSpinner">
-    <div class="spinner-border text-primary mb-3" style="width: 4rem; height: 4rem;"></div>
-    <h3 id="loadingText" class="fw-bold">데이터를 처리 중입니다...</h3>
-    
-    <div class="w-50 mt-4" style="max-width: 500px;">
-        <div class="progress" style="height: 25px; border-radius: 15px; background-color: #333;">
-            <div id="loadingProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success fw-bold fs-6" role="progressbar" style="width: 0%;">0%</div>
+    <div class="spin"></div>
+    <div id="loadingText">명단을 읽고 있어요...</div>
+    <div class="mt-3" style="width:min(460px, 80vw);">
+        <div class="progress">
+            <div id="loadingProgressBar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
         </div>
-        <p id="loadingProgressText" class="text-center mt-3 mb-0 fw-bold fs-5 text-warning">
-            <i class="bi bi-cpu-fill"></i> 엑셀 바이너리 암호 해독 중... (잠시만 대기해 주세요)
-        </p>
+        <p id="loadingProgressText" class="text-center mt-3 mb-0">엑셀 파일을 여는 중... (잠시만 기다려 주세요)</p>
     </div>
 </div>
 
-<div class="container-fluid px-4 mt-4 mb-5" id="mainContainer">
-    
-    <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
-        <div>
-            <h2>📇 Hana 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.5.1 · 261105</span></h2>
-            <p class="text-primary fw-bold mb-0 mt-1">소중한 시간 절약하시는데 도움이 되길 바랍니다.</p>
+<div id="mainContainer">
+
+    <!-- ① 명단 열기 -->
+    <div class="view active page narrow" id="setupPanel">
+        <div class="step"><div class="step-no">1</div><div class="step-t">명단 파일 열기</div></div>
+        <p class="lead-t">담당자를 고르고, 회사에서 받은 인사 명단 엑셀을 올려 주세요.<br>예전에 내려받은 리스트 엑셀을 올리면 이어서 정리할 수 있어요.</p>
+
+        <div class="custom-card">
+            <div class="f-label">담당 GRM <span id="initNotice" class="badge bg-warning text-dark">불러오는 중</span></div>
+            <select id="grmIdSelect" class="form-select form-select-lg" disabled><option value="">불러오는 중...</option></select>
         </div>
-        <div class="d-flex align-items-end gap-2">
-            <div id="exportBtnGroup" style="display:none;" class="d-flex flex-column align-items-end gap-1">
-                <div class="btn-group shadow-sm">
-                    <button class="btn btn-outline-dark fw-bold" onclick="exportExcelBackup()"><i class="bi bi-file-excel"></i> 현재 작업 백업 (엑셀)</button>
-                    <button class="btn btn-success fw-bold" onclick="exportVCard()"><i class="bi bi-person-lines-fill"></i> 모바일 vCard 저장</button>
-                    <button class="btn btn-warning fw-bold text-dark" onclick="exportKaTalk()"><i class="bi bi-chat-fill"></i> 까톡오토 양식으로 출력</button>
-                </div>
-                <div class="form-check mb-0" title="폰 연락처의 '메모'란에 사번/생년월일이 함께 저장됩니다. 끄면 이름·번호만 저장됩니다.">
-                    <input class="form-check-input" type="checkbox" id="vcardMemoCheck" checked>
-                    <label class="form-check-label small fw-bold text-secondary" for="vcardMemoCheck">vCard에 메모(사번/생년월일) 포함</label>
-                </div>
+
+        <div class="custom-card">
+            <div class="f-label">명단 엑셀</div>
+            <div id="dropZone" class="dropzone" onclick="document.getElementById('targetFile').click()">
+                <div class="dropzone-icon" id="dropIcon"><i class="bi bi-file-earmark-arrow-up-fill"></i></div>
+                <h4 class="mb-1" id="dropTitle">여기를 눌러 파일 고르기</h4>
+                <div class="f-help mt-0" id="dropSub">또는 엑셀 파일을 여기로 끌어다 놓기</div>
+                <input type="file" id="targetFile" class="d-none" accept=".xlsx, .xls, .csv">
             </div>
-            <button id="btnAdminLogin" class="btn btn-outline-dark btn-sm fw-bold shadow-sm" onclick="openAdminLoginModal()" title="슈퍼관리자 로그인">
-                <i class="bi bi-shield-lock-fill"></i> 관리자
-            </button>
         </div>
+
+        <div class="custom-card">
+            <div class="f-label">위촉일자로 거르기 <span class="opt">(선택 · 비워 두면 전체)</span></div>
+            <div class="d-flex align-items-center" style="max-width:460px;">
+                <input type="date" id="startDate" class="form-control">
+                <span class="mx-2 fw-bold text-secondary">~</span>
+                <input type="date" id="endDate" class="form-control">
+            </div>
+        </div>
+
+        <button id="btnStart" class="btn-confirm block mt-2" onclick="startParsingPipeline()" disabled><i class="bi bi-magic"></i> 연락처 뽑기 시작</button>
     </div>
 
-    <div class="collapse show" id="setupPanel">
-        <div class="card shadow-sm mb-4 border-primary">
-            <div class="card-header text-primary bg-white fs-5"><i class="bi bi-1-circle-fill"></i> 데이터 업로드 및 기본 설정</div>
-            <div class="card-body">
-                <div class="row g-4 align-items-center">
-                    <div class="col-md-5 border-end">
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-secondary">1. GRM 담당자 선택</label>
-                            <select id="grmIdSelect" class="form-select border-primary shadow-sm" disabled><option value="">대기 중...</option></select>
-                            <div class="form-text mt-1"><span id="initNotice" class="badge bg-warning text-dark">대기중</span> GRM_Data.xlsx 연동</div>
-                        </div>
-                        <div>
-                            <label class="form-label fw-bold text-secondary">2. 위촉일자 필터링 (선택)</label>
-                            <div class="d-flex align-items-center">
-                                <input type="date" id="startDate" class="form-control shadow-sm">
-                                <span class="mx-2 fw-bold">~</span>
-                                <input type="date" id="endDate" class="form-control shadow-sm">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-7">
-                        <label class="form-label fw-bold text-secondary">3. 타겟 엑셀 데이터 (원시 엑셀 OR 백업 양식)</label>
-                        <div id="dropZone" class="dropzone" onclick="document.getElementById('targetFile').click()">
-                            <div class="dropzone-icon" id="dropIcon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
-                            <h4 class="fw-bold text-primary mb-2" id="dropTitle">여기로 엑셀 파일을 드래그 앤 드롭</h4>
-                            <input type="file" id="targetFile" class="d-none" accept=".xlsx, .xls, .csv">
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mt-4 pt-3 border-top">
-                    <button id="btnStart" class="btn btn-primary btn-lg px-5 py-2 fw-bold shadow" onclick="startParsingPipeline()" disabled><i class="bi bi-magic"></i> 연락처 추출 시작</button>
-                </div>
+    <!-- ② 정리하기 -->
+    <div class="view page" id="workspaceArea">
+        <div class="step"><div class="step-no">2</div><div class="step-t">정리하기</div></div>
+        <p class="lead-t">폰에 저장될 이름을 다듬어요. 줄을 <b>두 번 누르면</b> 직접 고칠 수 있고, 잘못하면 아래 <b>[되돌리기]</b>를 누르세요.</p>
+
+        <div class="hint-bar" id="mergeHint" style="display:none;">
+            <i class="bi bi-people-fill lead-ic"></i>
+            <div class="flex-grow-1">
+                <div class="t">같은 사람이 번호 2개로 나뉜 경우가 <span id="mergeHintCnt">0</span>명 있어요</div>
+                <div class="d">이름·생년월일·소속이 같은 사람(지점 대표·총무 코드 등)입니다. 하나로 합치면 메모에 사번이 함께 들어가요.</div>
             </div>
-        </div>
-    </div>
-
-    <div id="workspaceArea" style="display: none;">
-        
-        <div class="tool-bar mb-3">
-            <div class="row mb-3 align-items-center">
-                <div class="col-lg-3">
-                    <div class="input-group shadow-sm">
-                        <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-search"></i></span>
-                        <input type="text" id="searchInput" class="form-control border-primary" placeholder="검색 (예: 에이플 잠실)">
-                        <span class="input-group-text bg-white border-primary clear-btn" onclick="clearSearch()"><i class="bi bi-x-lg"></i></span>
-                    </div>
-                </div>
-                <div class="col-lg-9 d-flex justify-content-end align-items-center mt-2 mt-lg-0">
-                    <input type="file" id="ruleFile" class="d-none" accept=".json" onchange="readPatternFile(event)">
-                    <input type="file" id="vcfPhoneFile" class="d-none" accept=".vcf" onchange="handleVcfSync(event)">
-                    
-                    <button class="btn btn-info btn-sm fw-bold text-white shadow-sm me-3" onclick="openVcfGuideModal()">
-                        <i class="bi bi-phone-vibrate"></i> 폰 연락처 중복 검사
-                    </button>
-
-                    <div class="btn-group me-3 shadow-sm">
-                        <button class="btn btn-light border btn-sm fw-bold text-dark" id="btnUndo" onclick="undoAction()" disabled><i class="bi bi-arrow-counterclockwise text-primary"></i> 취소</button>
-                        <button class="btn btn-light border btn-sm fw-bold text-dark" id="btnRedo" onclick="redoAction()" disabled><i class="bi bi-arrow-clockwise text-success"></i> 복구</button>
-                    </div>
-
-                    <div class="btn-group me-3 shadow-sm">
-                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSelectModal()"><i class="bi bi-upload"></i> 패턴 로드</button>
-                        <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="openPatternSaveModal()"><i class="bi bi-download"></i> 패턴 저장</button>
-                    </div>
-                    
-                    <div class="btn-group shadow-sm" role="group">
-                        <input type="radio" class="btn-check" name="viewFilter" id="viewAll" autocomplete="off" checked>
-                        <label class="btn btn-outline-primary fw-bold" for="viewAll">전체</label>
-
-                        <input type="radio" class="btn-check" name="viewFilter" id="viewGaOnly" autocomplete="off">
-                        <label class="btn btn-outline-dark fw-bold" for="viewGaOnly">판매인(GA)만</label>
-
-                        <input type="radio" class="btn-check" name="viewFilter" id="viewNew" autocomplete="off">
-                        <label class="btn btn-outline-success fw-bold" for="viewNew">신규</label>
-
-                        <input type="radio" class="btn-check" name="viewFilter" id="viewDup" autocomplete="off">
-                        <label class="btn btn-outline-secondary fw-bold" for="viewDup">중복</label>
-
-                        <input type="radio" class="btn-check" name="viewFilter" id="viewWarning" autocomplete="off">
-                        <label class="btn btn-outline-danger fw-bold" for="viewWarning"><i class="bi bi-exclamation-triangle-fill"></i> 경고</label>
-
-                        <input type="radio" class="btn-check" name="viewFilter" id="viewDupName" autocomplete="off">
-                        <label class="btn btn-warning fw-bold text-dark" for="viewDupName" title="이름은 같은데 번호가 다른 연락처만 봅니다. 생년월일이 다르면 동명이인(A·B 구분 필요), 생년월일이 같으면 한 사람의 복수 코드(총무+영업)로 봅니다.">
-                            <i class="bi bi-people-fill"></i> 이름중복
-                            <span class="badge bg-danger ms-1" id="dupNameCount" title="동명이인(생년월일 다름) - 구분 필요">0</span>
-                            <span class="badge bg-info text-dark ms-1" id="samePersonCount" title="동일인 추정(생년월일 같음) - 구분 불필요">0</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex flex-wrap align-items-center border-top pt-3">
-                <span class="badge bg-primary fs-6 me-2">치환</span>
-                <input type="text" id="findText" class="form-control form-control-sm shadow-sm me-2" placeholder="A (찾을 단어)" style="width: 120px;" tabindex="1">
-                <i class="bi bi-arrow-right text-muted me-2"></i>
-                <input type="text" id="replaceText" class="form-control form-control-sm shadow-sm me-2" placeholder="B (바꿀 단어)" style="width: 120px;" tabindex="2">
-                <button class="btn btn-sm btn-dark fw-bold shadow-sm" onclick="applyReplaceRule()">적용</button>
-                
-                <div class="vr mx-3"></div>
-                
-                <span class="badge bg-success fs-6 me-2">추가</span>
-                <select id="addTarget" class="form-select form-select-sm shadow-sm me-2" style="width: 80px;" tabindex="3">
-                    <option value="name" selected>이름</option>
-                    <option value="memo">메모</option>
-                </select>
-                <select id="addPos" class="form-select form-select-sm shadow-sm me-2" style="width: 80px;" tabindex="4">
-                    <option value="front">맨 앞</option>
-                    <option value="back">맨 뒤</option>
-                </select>
-                <input type="text" id="addText" class="form-control form-control-sm shadow-sm me-2" placeholder="추가할 단어" style="width: 120px;" tabindex="5">
-                <div class="form-check d-flex align-items-center me-3 mb-0">
-                    <input class="form-check-input me-1 shadow-sm" type="checkbox" id="addSpaceCheck" tabindex="6">
-                    <label class="form-check-label small text-secondary fw-bold" for="addSpaceCheck" style="margin-top: 2px;">띄어쓰기</label>
-                </div>
-                <button class="btn btn-sm btn-dark fw-bold shadow-sm" onclick="applyAddRule()">적용</button>
-
-                <div class="vr mx-3"></div>
-
-                <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" onclick="deleteSelectedContacts()"><i class="bi bi-trash3-fill"></i> 체크된 항목 삭제</button>
-
-                <span id="toastStatus" class="toast-status text-success ms-4"><i class="bi bi-check-circle-fill"></i> 완료</span>
-            </div>
+            <button class="btn-line y" onclick="openMergeModal()"><i class="bi bi-intersect"></i> 같은 사람 합치기</button>
         </div>
 
-        <div class="card shadow border-0 mb-4">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-list-columns-reverse fs-5 text-primary me-2"></i>
-                    <span class="fw-bold fs-5 text-dark">연락처 편집 리스트</span>
-                    <span id="ui_total_count" class="badge bg-secondary ms-2 fs-6">총 0명</span>
+        <div class="tool-grid">
+            <div class="tool">
+                <div class="tool-t"><i class="bi bi-arrow-left-right"></i> 단어 바꾸기 <span class="sub">이름 안의 단어를 다른 말로</span></div>
+                <div class="row-in">
+                    <input type="text" id="findText" class="form-control grow" placeholder="찾을 단어" tabindex="1">
+                    <i class="bi bi-arrow-right text-muted"></i>
+                    <input type="text" id="replaceText" class="form-control grow" placeholder="바꿀 단어" tabindex="2">
+                    <button class="btn-line sm y" onclick="applyReplaceRule()">바꾸기</button>
                 </div>
-                <div class="d-flex align-items-center">
-                    <span class="fw-bold text-secondary me-2" style="font-size: 0.9rem;">호칭 삽입 위치 :</span>
-                    <select id="staffPositionSelect" class="form-select form-select-sm shadow-sm me-3" style="width: 350px;" onchange="changeStaffPosition()">
-                        <option value="front">[이름 앞] 예: [지점스탭] ㅇㅇ생명 홍길동</option>
-                        <option value="back">[이름 뒤] 예: ㅇㅇ생명 홍길동 [지점스탭]</option>
-                        <option value="memo_front">[메모 앞] 예: [지점스탭] G1234 / 801212-3</option>
-                        <option value="memo_back" selected>[메모 뒤] 예: G1234 / 801212-3 [지점스탭]</option>
-                        <option value="none">[삽입 안 함] (직급 표기 제거)</option>
+            </div>
+            <div class="tool">
+                <div class="tool-t"><i class="bi bi-plus-square"></i> 단어 붙이기
+                    <span class="form-check right mb-0"><input class="form-check-input" type="checkbox" id="addSpaceCheck" tabindex="6"><label class="form-check-label" for="addSpaceCheck">한 칸 띄우고 붙이기</label></span></div>
+                <div class="row-in">
+                    <select id="addTarget" class="form-select" style="width:84px;flex-shrink:0;" tabindex="3">
+                        <option value="name" selected>이름</option>
+                        <option value="memo">메모</option>
                     </select>
-                    <div class="text-muted" style="font-size: 0.85rem;">행(Row) 더블클릭: 개별 수동 편집</div>
+                    <select id="addPos" class="form-select" style="width:90px;flex-shrink:0;" tabindex="4">
+                        <option value="front">맨 앞</option>
+                        <option value="back">맨 뒤</option>
+                    </select>
+                    <input type="text" id="addText" class="form-control grow" placeholder="붙일 단어" tabindex="5">
+                    <button class="btn-line sm y" onclick="applyAddRule()">붙이기</button>
+                </div>
+            </div>
+            <div class="tool">
+                <div class="tool-t"><i class="bi bi-tag"></i> 직급 표시 위치 <span class="sub">[지점스탭] 같은 표시</span></div>
+                <select id="staffPositionSelect" class="form-select" onchange="changeStaffPosition()">
+                    <option value="front">이름 앞 — [지점스탭] ㅇㅇ생명 홍길동</option>
+                    <option value="back">이름 뒤 — ㅇㅇ생명 홍길동 [지점스탭]</option>
+                    <option value="memo_front">메모 앞 — [지점스탭] G1234 / 801212-3</option>
+                    <option value="memo_back" selected>메모 뒤 (추천) — G1234 / 801212-3 [지점스탭]</option>
+                    <option value="none">넣지 않음 (직급 표시 지우기)</option>
+                </select>
+            </div>
+            <div class="tool">
+                <div class="tool-t"><i class="bi bi-magic"></i> 줄임말 한 번에 적용 <span class="sub">자주 쓰는 바꾸기 묶음</span></div>
+                <div class="row-in">
+                    <button class="btn-line sm" onclick="openPatternSelectModal()"><i class="bi bi-upload"></i> 규칙 불러오기</button>
+                    <button class="btn-line sm" onclick="openPatternSaveModal()"><i class="bi bi-download"></i> 내 규칙 저장</button>
+                </div>
+            </div>
+        </div>
+        <input type="file" id="ruleFile" class="d-none" accept=".json" onchange="readPatternFile(event)">
+        <input type="file" id="vcfPhoneFile" class="d-none" accept=".vcf" onchange="handleVcfSync(event)">
+
+        <div class="list-card mb-4">
+            <div class="list-head">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="searchInput" class="form-control" placeholder="찾기 (예: 에이플 잠실)">
+                    <span class="clear-btn" onclick="clearSearch()" title="지우기"><i class="bi bi-x-circle-fill"></i></span>
+                </div>
+                <div class="seg" role="group">
+                    <input type="radio" name="viewFilter" id="viewAll" autocomplete="off" checked><label for="viewAll">전체</label>
+                    <input type="radio" name="viewFilter" id="viewDupName" autocomplete="off"><label for="viewDupName" title="이름은 같은데 번호가 다른 사람만 봅니다. 생년월일이 다르면 동명이인(A·B 구분), 같으면 한 사람의 코드 2개입니다.">
+                        이름 겹침
+                        <span class="cnt red" id="dupNameCount" title="동명이인(생년월일 다름) — 구분 필요">0</span>
+                        <span class="cnt blue" id="samePersonCount" title="같은 사람(생년월일 같음) — 합치기 가능">0</span>
+                    </label>
+                    <input type="radio" name="viewFilter" id="viewWarning" autocomplete="off"><label for="viewWarning" title="이름이 17자 이상이면 카톡에서 잘릴 수 있어요"><i class="bi bi-exclamation-triangle-fill text-danger"></i> 이름 긴 것</label>
+                    <input type="radio" name="viewFilter" id="viewGaOnly" autocomplete="off"><label for="viewGaOnly">판매인(GA)만</label>
+                    <input type="radio" name="viewFilter" id="viewNew" autocomplete="off"><label for="viewNew" title="[폰 연락처와 겹치는 사람 찾기]를 한 뒤에 씁니다">폰에 없는 사람</label>
+                    <input type="radio" name="viewFilter" id="viewDup" autocomplete="off"><label for="viewDup" title="[폰 연락처와 겹치는 사람 찾기]를 한 뒤에 씁니다">폰에 있는 사람</label>
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <button class="btn-line sm" onclick="openVcfGuideModal()" title="폰에서 내보낸 연락처 파일(.vcf)과 비교합니다"><i class="bi bi-phone-vibrate"></i> 폰 연락처와 비교</button>
+                    <button class="btn-line sm red" onclick="deleteSelectedContacts()" title="체크한 줄을 리스트에서 뺍니다"><i class="bi bi-trash3"></i> 체크한 줄 빼기</button>
                 </div>
             </div>
 
-            <div id="dupNameActionBar" class="align-items-center flex-wrap gap-2 px-3 py-2" style="display:none; background:#fff4e6; border-top:1px solid #ffe0b2;">
-                <i class="bi bi-people-fill text-warning"></i>
-                <span class="fw-bold text-dark">동명이인 일괄 구분 <span class="text-muted fw-normal small">(맨 끝에 붙임 · 예: 홍길동B) :</span></span>
-                <button class="btn btn-sm btn-warning fw-bold text-dark shadow-sm" onclick="applyDupNameSuffix('all')">
-                    모두 A·B·C <span class="fw-normal small">(1번째 A · 2번째 B…)</span>
-                </button>
-                <button class="btn btn-sm btn-outline-warning fw-bold text-dark shadow-sm" onclick="applyDupNameSuffix('fromSecond')">
-                    2번째부터 B·C <span class="fw-normal small">(1번째 유지 · 2번째 B…)</span>
-                </button>
+            <div id="dupNameActionBar" class="align-items-center flex-wrap gap-2" style="display:none;">
+                <span class="fw-bold" style="color:var(--active-text);"><i class="bi bi-people-fill text-warning"></i> 동명이인 구분 글자 붙이기 <span class="text-muted fw-normal small">(이름 맨 끝 · 예: 홍길동B)</span></span>
+                <button class="btn-line sm y" onclick="applyDupNameSuffix('all')">모두 A·B·C <span class="fw-normal small">(1번째 A · 2번째 B…)</span></button>
+                <button class="btn-line sm" onclick="applyDupNameSuffix('fromSecond')">2번째부터 B·C <span class="fw-normal small">(1번째는 그대로)</span></button>
+                <span class="vr mx-1"></span>
+                <button class="btn-line sm y" id="btnMergeInBar" onclick="openMergeModal()"><i class="bi bi-intersect"></i> 같은 사람 합치기 <span class="cnt blue" id="mergeBarCnt">0</span></button>
                 <div class="form-check form-switch d-flex align-items-center mb-0 ms-1">
-                    <input class="form-check-input me-1 shadow-sm" type="checkbox" id="hideSamePerson">
-                    <label class="form-check-label small fw-bold text-dark" for="hideSamePerson" style="margin-top:2px;">동일인 추정 숨기기</label>
+                    <input class="form-check-input me-1" type="checkbox" id="hideSamePerson">
+                    <label class="form-check-label small fw-bold text-dark" for="hideSamePerson" style="margin-top:2px;">같은 사람(코드 2개)은 숨기기</label>
                 </div>
-                <span class="text-muted small ms-1" style="flex-basis:100%;">
+                <span class="text-muted small" style="flex-basis:100%;">
                     <i class="bi bi-info-circle"></i>
-                    <b>생년월일이 다르면</b> 동명이인 → 사람별로 A·B 부여(번호순).
-                    <b>생년월일이 같으면</b> 한 사람의 복수 코드(총무+영업)로 보고 <b>같은 이름 유지</b> — 구분 접미를 붙이지 않습니다. · 되돌리려면 상단 [취소]
+                    <b>생년월일이 다르면</b> 동명이인 → 사람마다 A·B를 붙여요(번호순).
+                    <b>생년월일이 같으면</b> 한 사람의 코드 2개(총무+영업) → 글자를 붙이지 않고, [같은 사람 합치기]로 하나로 만들 수 있어요.
                 </span>
             </div>
 
-            <div class="card-body p-0 table-scroll-area">
+            <div class="table-scroll-area">
                 <table class="table table-hover table-sm mb-0 text-center align-middle" style="table-layout: fixed;">
                     <colgroup>
-                        <col style="width: 50px;">  
-                        <col style="width: 60px;">  
-                        <col>                       
-                        <col style="width: 140px;"> 
-                        <col style="width: 380px;"> 
-                        <col style="width: 110px;"> 
+                        <col style="width: 46px;">
+                        <col style="width: 60px;">
+                        <col>
+                        <col style="width: 140px;">
+                        <col style="width: 380px;">
+                        <col style="width: 120px;">
                     </colgroup>
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th><input class="form-check-input" type="checkbox" id="chkAll" onchange="toggleAllCheckboxes()" checked></th>
-                            <th>No.</th>
-                            <th>임시저장이름 (편집 대상)</th>
-                            <th>연락처</th>
-                            <th>메모 (사번 / 생년월일-코드 등)</th>
-                            <th>권한구분</th>
+                            <th><input class="form-check-input" type="checkbox" id="chkAll" onchange="toggleAllCheckboxes()" checked title="모두 체크 / 모두 해제"></th>
+                            <th>번호</th>
+                            <th class="text-start">폰에 저장될 이름</th>
+                            <th>전화번호</th>
+                            <th>메모 (사번 / 생년월일)</th>
+                            <th>구분</th>
                         </tr>
                     </thead>
                     <tbody id="contactTableBody">
-                        <tr><td colspan="6" class="text-muted py-5">추출을 시작해주세요.</td></tr>
+                        <tr><td colspan="6" class="text-muted py-5">명단을 먼저 열어 주세요.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div id="adminPanel" style="display:none;">
+    <!-- ③ 내려받기 -->
+    <div class="view page narrow" id="exportView">
+        <div class="step"><div class="step-no">3</div><div class="step-t">내려받기</div></div>
+        <p class="lead-t">정리한 리스트를 파일로 받아요. <b>체크된 사람만</b> 들어갑니다.</p>
+
+        <div class="custom-card dl-main">
+            <div class="dl-ic"><i class="bi bi-file-earmark-spreadsheet-fill"></i></div>
+            <div class="big-n"><span id="dlCount">0</span>명</div>
+            <div class="text-secondary mb-4" id="dlCountSub">체크된 사람</div>
+            <button class="btn-confirm block" onclick="exportExcelBackup()"><i class="bi bi-download"></i> 현재 리스트 내려받기 (엑셀)</button>
+            <div class="f-help mt-3">폰 「연락처 적용」 앱에 넣는 파일이에요. 나중에 ①에서 다시 열어 이어서 정리할 수도 있어요.</div>
+        </div>
+
+        <div class="text-secondary fw-bold small ms-1 mb-2">다른 형식으로 받기</div>
+        <div class="custom-card py-3">
+            <div class="dl-sub">
+                <div class="ic" style="background:#e7f7ec;color:#15803d;"><i class="bi bi-person-vcard"></i></div>
+                <div class="flex-grow-1">
+                    <div class="t">폰 연락처 파일 (vCard)</div>
+                    <div class="d">폰에 바로 불러올 수 있는 .vcf 파일
+                        <span class="form-check form-check-inline ms-2 mb-0" title="폰 연락처의 '메모'란에 사번/생년월일이 함께 저장됩니다. 끄면 이름·번호만 저장됩니다.">
+                            <input class="form-check-input" type="checkbox" id="vcardMemoCheck" checked>
+                            <label class="form-check-label" for="vcardMemoCheck">메모(사번/생년월일) 포함</label>
+                        </span>
+                    </div>
+                </div>
+                <button class="btn-line" onclick="exportVCard()">받기</button>
+            </div>
+        </div>
+        <div class="custom-card py-3">
+            <div class="dl-sub">
+                <div class="ic" style="background:#fff7cc;color:#a07800;"><i class="bi bi-chat-fill"></i></div>
+                <div class="flex-grow-1">
+                    <div class="t">까톡오토 친구등록 양식</div>
+                    <div class="d">까톡오토 프로그램에 넣는 이름 목록 엑셀</div>
+                </div>
+                <button class="btn-line" onclick="exportKaTalk()">받기</button>
+            </div>
+        </div>
+        <div class="text-center mt-2"><button class="link-btn" onclick="goStep(2)"><i class="bi bi-arrow-left"></i> 정리하기로 돌아가기</button></div>
+    </div>
+
+    <div id="adminPanel" class="page" style="display:none;">
         <div class="card shadow border-warning mb-4">
             <div class="card-header bg-warning d-flex justify-content-between align-items-center">
                 <span class="fw-bold fs-5 text-dark"><i class="bi bi-shield-lock-fill"></i> 슈퍼관리자 모드 — 지점코드 분석</span>
@@ -340,6 +507,42 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- 아래 고정줄 (② 정리하기에서만) -->
+<div class="bottom-bar" id="bottomBar">
+    <div class="inner">
+        <button class="btn-line" id="btnUndo" onclick="undoAction()" disabled title="방금 한 일을 되돌립니다"><i class="bi bi-arrow-counterclockwise"></i> 되돌리기</button>
+        <button class="btn-line" id="btnRedo" onclick="redoAction()" disabled title="되돌린 일을 다시 합니다"><i class="bi bi-arrow-clockwise"></i> 다시 하기</button>
+        <span class="cnt-t ms-2" id="ui_total_count">총 0명</span>
+        <span id="toastStatus" class="toast-status text-success ms-2"><i class="bi bi-check-circle-fill"></i> 완료</span>
+        <button class="btn-confirm ms-auto" onclick="goStep(3)">다음: 내려받기 <i class="bi bi-arrow-right"></i></button>
+    </div>
+</div>
+
+<!-- 같은 사람 합치기 -->
+<div class="modal fade" id="mergeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-intersect"></i> 같은 사람 합치기</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="soft-box mb-3">
+            이름·생년월일·소속이 모두 같은 사람이에요. 하나로 합치면 <b>남길 번호 1개</b>만 리스트에 남고,
+            메모에는 <b>사번이 모두</b> 들어가요. (예: <b style="font-family:inherit">G1234567, 1234567 / 801212-1 [지점스탭]</b>)<br>
+            남길 번호를 눌러 고르세요. 기본은 <b>G로 시작하는 사번</b>의 번호예요. 합치지 않을 사람은 체크를 끄세요.
+        </div>
+        <div id="mergeList"></div>
+        <div id="mergeSkipNote" class="f-help"></div>
+      </div>
+      <div class="modal-footer d-flex gap-2">
+        <button type="button" class="btn btn-secondary flex-fill py-2" data-bs-dismiss="modal">닫기</button>
+        <button type="button" class="btn btn-primary flex-fill py-2" id="btnDoMerge" onclick="applyMerge()"><i class="bi bi-intersect"></i> 합치기</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="vcfGuideModal" tabindex="-1">
@@ -499,7 +702,7 @@
             const wb = XLSX.read(new Uint8Array(await response.arrayBuffer()), { type: 'array' });
             const grmData = XLSX.utils.sheet_to_json(wb.Sheets["GRM별_지점코드"], {header: 1});
             
-            let selectHtml = `<option value="">-- GRM 담당자를 선택하세요 --</option>`;
+            let selectHtml = `<option value="">담당자를 고르세요</option>`;
             for(let c = 0; c < grmData[0].length; c++) {
                 let code = String(grmData[0][c] || "").trim();
                 let name = String(grmData[1][c] || "").trim();
@@ -512,9 +715,9 @@
             }
             grmSelect.innerHTML = selectHtml;
             grmSelect.disabled = document.getElementById('btnStart').disabled = false;
-            noticeBadge.innerText = "연동 완료"; noticeBadge.classList.replace('bg-warning', 'bg-success');
+            noticeBadge.innerText = "준비됨"; noticeBadge.classList.replace('bg-warning', 'bg-success'); noticeBadge.classList.remove('text-dark');
         } catch(error) {
-            noticeBadge.innerText = "GRM_Data 누락"; noticeBadge.classList.replace('bg-warning', 'bg-danger');
+            noticeBadge.innerText = "담당자 목록(GRM_Data)을 못 불러옴"; noticeBadge.classList.replace('bg-warning', 'bg-danger'); noticeBadge.classList.remove('text-dark');
         }
 
         document.getElementById('replaceText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyReplaceRule(); } });
@@ -542,18 +745,71 @@
         e.preventDefault(); dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length) { targetFileInput.files = e.dataTransfer.files; handleFileSelect({target: targetFileInput}); }
     });
+    targetFileInput.addEventListener('change', handleFileSelect);
     function handleFileSelect(e) {
         if(e.target.files.length > 0) {
-            document.getElementById('dropIcon').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+            dropZone.classList.add('ok');
+            document.getElementById('dropIcon').innerHTML = '<i class="bi bi-check-circle-fill"></i>';
             document.getElementById('dropTitle').innerText = e.target.files[0].name;
-            document.getElementById('dropTitle').classList.replace('text-primary', 'text-success');
+            document.getElementById('dropSub').innerText = '다른 파일로 바꾸려면 여기를 다시 누르세요';
         }
     }
 
+    // ===== v1.6.0 화면 단계 이동 (① 명단 열기 → ② 정리하기 → ③ 내려받기) =====
+    let curStep = 1;
+    function goStep(n) {
+        if (n > 1 && globalData.length === 0) return;
+        curStep = n;
+        ['setupPanel', 'workspaceArea', 'exportView'].forEach((id, i) => document.getElementById(id).classList.toggle('active', i + 1 === n));
+        document.getElementById('adminPanel').style.display = 'none';
+        document.getElementById('stepper').style.visibility = 'visible';
+        for (let i = 1; i <= 3; i++) {
+            const b = document.getElementById('stp' + i);
+            b.classList.toggle('on', i === n);
+            b.classList.toggle('done', i < n && globalData.length > 0);
+            b.classList.toggle('ahead', i > n && globalData.length > 0);
+            b.disabled = (i === n) || (i > 1 && globalData.length === 0);
+        }
+        document.getElementById('bottomBar').classList.toggle('show', n === 2);
+        document.querySelectorAll('#topMenu .need-data').forEach(b => b.style.display = globalData.length ? '' : 'none');
+        if (n === 2) updateMergeHint();
+        if (n === 3) updateExportView();
+        window.scrollTo(0, 0);
+    }
+    function toggleMenu(e) { e.stopPropagation(); document.getElementById('topMenu').classList.toggle('open'); }
+    document.addEventListener('click', () => document.getElementById('topMenu').classList.remove('open'));
+    // 처음부터 다시: 정리한 내용을 버리고 ①로 (담당 GRM 선택은 유지)
+    function restartAll() {
+        if (globalData.length && !confirm('지금까지 정리한 내용이 사라지고 처음 화면으로 돌아갑니다.\n(필요하면 먼저 ③에서 리스트를 내려받으세요)\n\n처음부터 다시 할까요?')) return;
+        globalData = []; filteredData = []; undoStack = []; redoStack = []; patternHistory = [];
+        updateHistoryButtons();
+        targetFileInput.value = '';
+        dropZone.classList.remove('ok');
+        document.getElementById('dropIcon').innerHTML = '<i class="bi bi-file-earmark-arrow-up-fill"></i>';
+        document.getElementById('dropTitle').innerText = '여기를 눌러 파일 고르기';
+        document.getElementById('dropSub').innerText = '또는 엑셀 파일을 여기로 끌어다 놓기';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('viewAll').checked = true;
+        exitAdminModeQuiet();
+        goStep(1);
+    }
+    // ③ 내려받기 화면 숫자. 내보내기는 '지금 보이는 + 체크된' 사람만 들어가므로(기존 규칙) 일부만 보는 중이면 경고
+    function updateExportView() {
+        const sel = filteredData.filter(d => d.selected).length;
+        const all = globalData.filter(d => d.selected).length;
+        document.getElementById('dlCount').innerText = sel.toLocaleString();
+        const sub = document.getElementById('dlCountSub');
+        if (sel !== all) sub.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> 지금 ②에서 일부만 보는 중이라, 보이는 사람만 들어가요 (체크된 전체 ${all.toLocaleString()}명)</span><br><button class="link-btn" onclick="showAllForExport()">전체 보기로 바꾸기</button>`;
+        else sub.innerText = `체크된 사람 (리스트 전체 ${globalData.length.toLocaleString()}명 중)`;
+    }
+    function showAllForExport() { document.getElementById('viewAll').checked = true; document.getElementById('searchInput').value = ''; applyViewFilter(); updateExportView(); }
+    function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
     function initProgressBar() {
+        document.getElementById('loadingText').innerText = '명단을 읽고 있어요...';
         document.getElementById('loadingProgressBar').style.width = '0%';
         document.getElementById('loadingProgressBar').innerText = '0%';
-        document.getElementById('loadingProgressText').innerHTML = '<i class="bi bi-cpu-fill"></i> 엑셀 바이너리 암호 해독 중... (잠시만 대기해 주세요)';
+        document.getElementById('loadingProgressText').innerHTML = '엑셀 파일을 여는 중... (잠시만 기다려 주세요)';
         document.getElementById('loadingSpinner').style.display = 'flex';
     }
 
@@ -563,7 +819,7 @@
         let startD = document.getElementById('startDate').value.replace(/-/g, "");
         let endD = document.getElementById('endDate').value.replace(/-/g, "");
 
-        if(!grmId || !targetFile) return alert("GRM 및 엑셀 파일을 세팅해주세요.");
+        if(!grmId || !targetFile) return alert("담당 GRM을 고르고, 명단 엑셀 파일을 올려 주세요.");
         
         initProgressBar();
 
@@ -575,7 +831,7 @@
                     const percent = Math.round((msg.data.current / msg.data.total) * 100);
                     document.getElementById('loadingProgressBar').style.width = percent + '%';
                     document.getElementById('loadingProgressBar').innerText = percent + '%';
-                    document.getElementById('loadingProgressText').innerHTML = `<i class="bi bi-person-lines-fill"></i> 연락처 추출 및 스마트 병합 중... (${msg.data.current.toLocaleString()} / ${msg.data.total.toLocaleString()})`;
+                    document.getElementById('loadingProgressText').innerHTML = `연락처를 뽑는 중... (${msg.data.current.toLocaleString()} / ${msg.data.total.toLocaleString()})`;
                 
                 } else if(msg.data.status === 'success') {
                     globalData = msg.data.data;
@@ -586,11 +842,9 @@
                     document.getElementById('viewAll').checked = true;
                     applyViewFilter(); 
                     
-                    document.getElementById('setupPanel').classList.remove('show');
-                    document.getElementById('workspaceArea').style.display = 'block';
-                    document.getElementById('exportBtnGroup').style.display = 'inline-flex';
                     document.getElementById('loadingSpinner').style.display = 'none';
-                    worker.terminate(); 
+                    worker.terminate();
+                    goStep(2);
 
                 } else {
                     alert('파싱 오류: ' + msg.data.message);
@@ -619,7 +873,7 @@
         if(!file) return;
         
         document.getElementById('loadingSpinner').style.display = 'flex';
-        document.getElementById('loadingProgressText').innerText = "폰 연락처 교차 검증 중...";
+        document.getElementById('loadingText').innerText = "폰 연락처와 비교하는 중..."; document.getElementById('loadingProgressText').innerText = "";
 
         const reader = new FileReader();
         reader.onload = e => {
@@ -789,6 +1043,7 @@
             if (pa !== pb) return pa - pb;
             return (a.phone || '') < (b.phone || '') ? -1 : 1;
         });
+        updateMergeHint();
         renderTable();
     }
 
@@ -840,17 +1095,131 @@
             + (sameSkipped > 0 ? ` · 동일인 추정 ${sameSkipped}건은 유지` : ''), 'primary');
     }
 
+    // ===== v1.6.0 같은 사람 합치기 =====
+    // 대상: 성명(E)·생년월일·소속(대리점+지점)이 모두 같은데 번호가 다른 줄 (지점 대표·총무가 스탭코드+영업코드를 따로 가진 경우).
+    //   번호가 같은 경우는 worker.js가 이미 1줄로 합친다 → 여기서 만드는 모양도 그것과 똑같이 맞춘다:
+    //   메모 `사번1, 사번2 / 생년월일 [직급]`, 권한 `지점스탭`(판매인(GA)은 다른 권한이 있으면 뺌), E~H 는 '/'로 이음.
+    //   ⚠️ 남길 번호 1개만 리스트에 남고 나머지 번호는 버린다(사용자 결정 261105 — 메모에도 안 남김).
+    //   성명 열이 없는 옛 리스트는 '직급 표시를 뺀 이름 전체'가 같아야 같은 사람으로 본다.
+    const GA_ROLE = '판매인(GA)';
+    function stripTags(s) { return String(s || '').replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim(); }
+    function personNameOf(d) { const r = String(d.realName || '').trim(); return (r && !r.includes('/')) ? r : ''; }
+    function splitMemo(id) {
+        const s = stripTags(id), c = s.lastIndexOf('/');
+        const sp = x => x.split(',').map(t => t.trim()).filter(Boolean);
+        return c < 0 ? { emps: sp(s), births: [] } : { emps: sp(s.slice(0, c)), births: sp(s.slice(c + 1)) };
+    }
+    function empsOf(d) { const e = String(d.empNo || '').split('/').map(t => t.trim()).filter(Boolean); return e.length ? e : splitMemo(d.id).emps; }
+    function joinUnique(vals) { const out = []; vals.forEach(v => String(v || '').split('/').map(t => t.trim()).filter(Boolean).forEach(t => { if (!out.includes(t)) out.push(t); })); return out.join('/'); }
+    function findMergeGroups() {
+        const byName = new Map();
+        globalData.forEach(d => {
+            const rn = personNameOf(d);
+            if (!rn && String(d.realName || '').includes('/')) return;           // 한 번호를 여러 사람이 쓰는 줄은 제외
+            const k = rn ? 'R:' + rn : 'T:' + nameKey(stripTags(d.tempName));
+            if (!byName.has(k)) byName.set(k, []);
+            byName.get(k).push(d);
+        });
+        const groups = []; let diffOrg = 0;
+        byName.forEach(list => {
+            if (list.length < 2) return;
+            groupByPerson(list).forEach(p => {
+                if (p.unknown || p.items.length < 2) return;                    // 생년월일 모르면 합치지 않음
+                const byOrg = new Map();
+                p.items.forEach(d => {
+                    const o = (d.agency || d.branch) ? (d.agency || '') + '|' + (d.branch || '') : 'T:' + nameKey(stripTags(d.tempName));
+                    if (!byOrg.has(o)) byOrg.set(o, []);
+                    byOrg.get(o).push(d);
+                });
+                if (byOrg.size > 1) diffOrg++;
+                byOrg.forEach(items => { if (items.length >= 2) groups.push(items); });
+            });
+        });
+        return { groups, diffOrg };
+    }
+    function updateMergeHint() {
+        const n = globalData.length ? findMergeGroups().groups.length : 0;
+        document.getElementById('mergeHint').style.display = n ? 'flex' : 'none';
+        document.getElementById('mergeHintCnt').innerText = n;
+        document.getElementById('mergeBarCnt').innerText = n;
+        document.getElementById('btnMergeInBar').disabled = !n;
+    }
+    let mergeState = [];   // [{ items, keep, on }]
+    function openMergeModal() {
+        const { groups, diffOrg } = findMergeGroups();
+        if (!groups.length) return alert('합칠 사람이 없습니다.\n(이름·생년월일·소속이 모두 같은데 번호가 다른 사람이 없어요)');
+        mergeState = groups.map(items => ({ items, keep: Math.max(0, items.findIndex(d => empsOf(d).some(e => /^G/i.test(e)))), on: true }));
+        document.getElementById('mergeSkipNote').innerText = diffOrg ? `※ 이름·생년월일은 같지만 소속이 달라 합치지 않은 사람 ${diffOrg}명은 목록에서 뺐어요.` : '';
+        renderMergeList();
+        new bootstrap.Modal(document.getElementById('mergeModal')).show();
+    }
+    function renderMergeList() {
+        document.getElementById('mergeList').innerHTML = mergeState.map((g, gi) => {
+            const d0 = g.items[g.keep];
+            const nm = personNameOf(d0) || nameKey(stripTags(d0.tempName));
+            const birth = (birthKeys(d0.id)[0] || '').slice(0, 6);
+            const opts = g.items.map((d, i) => {
+                const on = i === g.keep;
+                return `<div class="mg-opt ${on ? 'on' : ''}" onclick="pickMergeKeep(${gi},${i})">
+                    <i class="bi ${on ? 'bi-record-circle-fill text-warning' : 'bi-circle text-secondary'} fs-5"></i>
+                    <span class="ph">${esc(d.phone)}</span>
+                    <span class="em">사번 <b>${esc(empsOf(d).join(', ') || '-')}</b>${d.role ? ' · ' + esc(d.role) : ''}</span>
+                    <span class="tag">${on ? '이 번호 남김' : '뺌'}</span></div>`;
+            }).join('');
+            return `<div class="mg-card ${g.on ? '' : 'off'}">
+                <div class="d-flex align-items-center gap-3">
+                    <input type="checkbox" class="form-check-input fs-5 m-0" ${g.on ? 'checked' : ''} onchange="toggleMergeGroup(${gi}, this.checked)" title="합치기 / 안 합치기">
+                    <div><div class="mg-name">${esc(nm)}</div><div class="mg-sub">${esc(nameKey(stripTags(d0.tempName)))}${birth ? ' · 생년월일 ' + esc(birth) : ''}</div></div>
+                </div>${opts}</div>`;
+        }).join('');
+        const n = mergeState.filter(g => g.on).length;
+        const b = document.getElementById('btnDoMerge');
+        b.disabled = !n; b.innerHTML = `<i class="bi bi-intersect"></i> ${n}명 합치기`;
+    }
+    function pickMergeKeep(gi, i) { mergeState[gi].keep = i; mergeState[gi].on = true; renderMergeList(); }
+    function toggleMergeGroup(gi, on) { mergeState[gi].on = on; renderMergeList(); }
+    function applyMerge() {
+        const todo = mergeState.filter(g => g.on);
+        if (!todo.length) return;
+        saveState();
+        const removed = new Set(), kept = [];
+        todo.forEach(g => {
+            const keep = g.items[g.keep];
+            const all = [keep, ...g.items.filter((_, i) => i !== g.keep)];   // 남길 줄의 사번이 맨 앞
+            const emps = [], births = [];
+            all.forEach(d => { const m = splitMemo(d.id); m.emps.forEach(e => { if (!emps.includes(e)) emps.push(e); }); m.births.forEach(x => { if (!births.includes(x)) births.push(x); }); });
+            keep.id = births.length ? `${emps.join(', ')} / ${births.join(', ')}` : emps.join(', ');   // 직급 표시는 아래 realign 이 다시 붙임
+            const roles = [];
+            all.forEach(d => String(d.role || '').split(',').map(r => r.trim()).filter(Boolean).forEach(r => { if (!roles.includes(r)) roles.push(r); }));
+            const nonGa = roles.filter(r => r !== GA_ROLE);
+            keep.role = (nonGa.length ? nonGa : roles).join(', ');
+            keep.realName = keep.realName || all.map(personNameOf).find(Boolean) || '';
+            keep.empNo = joinUnique(all.map(d => d.empNo));
+            keep.agency = joinUnique(all.map(d => d.agency));
+            keep.branch = joinUnique(all.map(d => d.branch));
+            keep.selected = all.some(d => d.selected);
+            keep.isMerged = true;
+            all.slice(1).forEach(d => removed.add(d));
+            kept.push(keep);
+        });
+        globalData = globalData.filter(d => !removed.has(d));
+        realignStaffPosition(kept);
+        bootstrap.Modal.getInstance(document.getElementById('mergeModal')).hide();
+        applyViewFilter();
+        showToastMessage(`${todo.length}명을 하나로 합쳤어요 (${removed.size}줄 빠짐 · 되돌리려면 [되돌리기])`, 'primary');
+    }
+
     function updateCountUI() {
         if (!filteredData) return;
         const total = filteredData.length;
         const selected = filteredData.filter(d => d.selected).length;
-        document.getElementById('ui_total_count').innerHTML = `총 ${total}명 <span class="text-warning fw-bold">(선택: ${selected}명)</span>`;
+        document.getElementById('ui_total_count').innerHTML = `보이는 ${total.toLocaleString()}명 · <span class="sel">체크 ${selected.toLocaleString()}명</span>`;
     }
 
     function renderTable() {
         const tbody = document.getElementById('contactTableBody');
         if(filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-5">결과가 존재하지 않습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-5">보여 줄 사람이 없어요.</td></tr>`;
             updateCountUI(); return;
         }
 
@@ -860,7 +1229,7 @@
             const len = d.tempName.length;
             let badgeHtml = len >= 21 ? `<span class="badge ms-1" style="background-color: #dc3545; color: white;">(${len}자)</span>` : 
                             len >= 17 ? `<span class="badge ms-1" style="background-color: #ffc107; color: black;">(${len}자)</span>` : "";
-            let mergedBadge = d.isMerged ? `<span class="badge bg-info text-dark ms-1">통합됨</span>` : "";
+            let mergedBadge = d.isMerged ? `<span class="badge bg-info text-dark ms-1" title="같은 사람의 코드 여러 개를 한 줄로 합친 연락처">합쳐짐</span>` : "";
             // 이름중복 표시: 생년월일 기준으로 동명이인(주황·구분 필요) / 동일인 복수코드(청록·구분 불필요) 구분
             const tag = dupNameTags.get(d);
             let dupNameBadge = "", rowStyle = "";
@@ -871,7 +1240,7 @@
                     if (tag.unknown) dupNameBadge += `<span class="badge bg-secondary ms-1" title="메모에 생년월일이 없어 동일인 여부를 판단할 수 없습니다. 별개의 사람으로 취급했습니다.">생년월일?</span>`;
                     rowStyle = ` style="background:#fff4e6;"`;
                 } else {
-                    dupNameBadge = `<span class="badge ms-1" style="background:#0dcaf0;color:#000;" title="이름 같음 + 생년월일 같음 → 동일인 추정(총무코드 + 본인 영업번호). 이름을 구분할 필요가 없습니다.">동일인 추정</span>`;
+                    dupNameBadge = `<span class="badge ms-1" style="background:#0dcaf0;color:#000;" title="이름 같음 + 생년월일 같음 → 동일인 추정(총무코드 + 본인 영업번호). 이름을 구분할 필요가 없고, [같은 사람 합치기]로 하나로 만들 수 있습니다.">같은 사람(코드 2개)</span>`;
                     rowStyle = ` style="background:#e6f7f9;"`;
                 }
             }
@@ -980,7 +1349,7 @@
 
     function showToastMessage(msg, color="success") {
         const toast = document.getElementById('toastStatus');
-        toast.className = `toast-status text-${color} ms-4`;
+        toast.className = `toast-status text-${color} ms-2`;
         toast.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${msg}`;
         toast.classList.add('show');
         clearTimeout(toastTimeout);
@@ -1042,7 +1411,7 @@
     async function loadCommonPatterns() {
         bootstrap.Modal.getInstance(document.getElementById('patternSelectModal')).hide();
         document.getElementById('loadingSpinner').style.display = 'flex';
-        document.getElementById('loadingProgressText').innerText = "공통 패턴 불러오는 중...";
+        document.getElementById('loadingText').innerText = "줄임말 규칙 불러오는 중..."; document.getElementById('loadingProgressText').innerText = "";
 
         try {
             const response = await fetch('./CommonEditPatterns.json?v=' + Date.now());
@@ -1078,7 +1447,8 @@
     // --- 파일 추출 ---
     // v1.5.0: A~D는 그대로(worker 재로드·google.html이 앞 4열을 읽음), E~H = 회사 명단 원본 값(편집 안 함, 없으면 빈칸).
     // ⚠️ E~H 열 제목(성명/사번/대리점/지점)은 폰 앱·GA 관리자용 웹이 제목으로 찾는다 — 바꾸지 말 것.
-    function exportExcelBackup() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분", "성명", "사번", "대리점", "지점"]]; targetList.forEach(d => wsData.push([d.tempName, d.phone, d.id, d.role, d.realName || "", d.empNo || "", d.agency || "", d.branch || ""]) ); const ws = XLSX.utils.aoa_to_sheet(wsData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "HanaList"); XLSX.writeFile(wb, `Hana연락처백업_${Date.now()}.xlsx`); }
+    function exportExcelBackup() { const targetList = filteredData.filter(d => d.selected); if(targetList.length === 0) return alert("출력할 대상이 없습니다."); const wsData = [["임시저장이름", "연락처", "사번 / 생년월일-코드", "권한구분", "성명", "사번", "대리점", "지점"]]; targetList.forEach(d => wsData.push([d.tempName, d.phone, d.id, d.role, d.realName || "", d.empNo || "", d.agency || "", d.branch || ""]) ); const ws = XLSX.utils.aoa_to_sheet(wsData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "HanaList"); XLSX.writeFile(wb, `Hana연락처리스트_${targetList.length}명_${fileStamp()}.xlsx`); }
+    function fileStamp() { const t = new Date(), p = n => String(n).padStart(2, '0'); return `${String(t.getFullYear()).slice(2)}${p(t.getMonth() + 1)}${p(t.getDate())}_${p(t.getHours())}${p(t.getMinutes())}`; }
     // GGaTalk_친구등록_양식.xlsx 기준 (2026-07 교체): Kakao_List 시트에 이름을 A열 2행부터, 참고용 Group_List 시트 포함.
     // ⚠️ Group_List 그룹명은 GGaTalk 양식 파일에서 그대로 가져온 것. 양식이 또 바뀌면 google.html과 함께 갱신할 것.
     const KAKAO_GROUPS = ['GAK 담당전체','IFA 담당전체','KGA 담당전체','KMI 담당전체','W에셋 담당전체','HK 담당전체','굿리치 담당전체','글로벌 담당전체','프라임 담당전체','에이플 담당전체','더베스트 담당전체','마이금융 담당전체','메가 담당전체','메타리치 담당전체','밸류 담당전체','삼성금융 담당전체','스카이블루 담당전체','신금플 담당전체','아너스 담당전체','엠금융 담당전체','영진 담당전체','원금융 담당전체','유퍼스트 담당전체','인카 담당전체','한보금 담당전체','한화금융서비스 담당전체','한화라이프랩 담당전체','에이플 담당전체 (본채널만)','삼성화재금융서비스','에이플러스 (임시)','싱크임시그룹'];
@@ -1169,23 +1539,21 @@
         }
     }
 
+    // v1.6.0: 단계 화면(.view)을 모두 감추고 관리자 화면만 보여 줌. 종료하면 하던 단계로 돌아감.
     function enterAdminMode() {
-        document.getElementById('setupPanel').style.display = 'none';
-        document.getElementById('workspaceArea').style.display = 'none';
-        document.getElementById('exportBtnGroup').style.display = 'none';
+        document.querySelectorAll('#mainContainer .view').forEach(v => v.classList.remove('active'));
+        document.getElementById('bottomBar').classList.remove('show');
+        document.getElementById('stepper').style.visibility = 'hidden';
         document.getElementById('adminPanel').style.display = 'block';
         document.getElementById('btnAdminLogin').classList.add('d-none');
     }
-
-    function exitAdminMode() {
+    function exitAdminModeQuiet() {
         document.getElementById('adminPanel').style.display = 'none';
         document.getElementById('btnAdminLogin').classList.remove('d-none');
-        if (globalData.length > 0) {
-            document.getElementById('workspaceArea').style.display = 'block';
-            document.getElementById('exportBtnGroup').style.display = 'inline-flex';
-        } else {
-            document.getElementById('setupPanel').style.display = 'block';
-        }
+    }
+    function exitAdminMode() {
+        exitAdminModeQuiet();
+        goStep(globalData.length > 0 ? curStep : 1);
     }
 
     // 관리자 dropzone (DOMContentLoaded 시점에 한 번만 바인딩)

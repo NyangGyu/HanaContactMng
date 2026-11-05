@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구글 연락처 정리 도우미 v1.5.1</title>
+    <title>구글 연락처 정리 도우미 v1.6.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -71,7 +71,7 @@
 
     <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-3">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.5.1 · 261105</span></h2>
+            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.6.0 · 261105</span></h2>
             <p class="text-secondary mb-0">이미 저장된 구글 주소록을 <b>현재 담당 명단</b>과 대조하여, 호칭·이전담당·개인 연락처를 정리합니다.</p>
         </div>
     </div>
@@ -93,7 +93,7 @@
             <ul>
                 <li><b>파일 2개</b>를 올립니다. 아무것도 서버로 전송되지 않고, 모두 이 브라우저 안에서만 처리됩니다.</li>
                 <li><b>① 구글 주소록 백업(CSV)</b> — 구글 연락처에서 “내보내기 → Google CSV”로 받은 <code>contacts.csv</code>. (지금 저장돼 있는 <u>전체</u> 연락처)</li>
-                <li><b>② 현재 담당 설계사 명단</b> — Hana 도구의 <b>[현재 작업 백업 (엑셀)]</b> 버튼으로 받은 <code>관리용 엑셀(.xlsx)</code>. (지금 기준 <u>담당 구역</u>) <b class="text-danger">vCard(.vcf)는 올릴 수 없습니다 — 아래 설명 참고.</b></li>
+                <li><b>② 현재 담당 설계사 명단</b> — Hana 도구 <b>③ 내려받기 → [현재 리스트 내려받기 (엑셀)]</b>로 받은 <code>관리용 엑셀(.xlsx)</code>. (지금 기준 <u>담당 구역</u>) <b class="text-danger">vCard(.vcf)는 올릴 수 없습니다 — 아래 설명 참고.</b></li>
                 <li>두 파일을 대조해서, 지금도 담당인 사람은 <b>호칭만 정리</b>하고, 담당이 아닌 사람은 <b>이전담당/개인</b>으로 분류해 드립니다.</li>
             </ul>
         </div>
@@ -151,8 +151,8 @@
                    그래서 <b>정보가 온전한 엑셀만</b> 받습니다.</p>
                 <div class="alert alert-light border mb-0 py-2">
                     <b><i class="bi bi-download"></i> 파일 받는 곳:</b>
-                    Hana 연락처 정리 도우미 → 오른쪽 위 <span class="badge bg-dark">현재 작업 백업 (엑셀)</span> 버튼
-                    → <code>Hana연락처백업_*.xlsx</code>
+                    Hana 연락처 정리 도우미 → ③ 내려받기 → <span class="badge bg-dark">현재 리스트 내려받기 (엑셀)</span> 버튼
+                    → <code>Hana연락처리스트_*.xlsx</code> (예전 이름 <code>Hana연락처백업_*.xlsx</code>)
                     <div class="mini mt-1 text-muted">이 화면에서 만든 <code>담당명단_관리엑셀_*.xlsx</code> 도 같은 양식이라 그대로 쓸 수 있습니다.
                         휴대폰용 vCard는 <b>마지막(6단계) 내보내기</b>에서 받으세요 — 폰에 저장하는 용도입니다.</div>
                 </div>
@@ -558,8 +558,8 @@ function loadNew(file, dz){
         alert('현재 담당 명단은 관리용 엑셀(.xlsx)만 올릴 수 있습니다.\n\n'
             + 'vCard(.vcf)는 휴대폰 저장용 형식이라 권한구분(직급)을 담을 칸이 없고,\n'
             + '사번/생년월일도 메모칸에만 들어가서 명단으로 쓰기엔 정보가 모자랍니다.\n\n'
-            + '▶ Hana 연락처 정리 도우미 → [현재 작업 백업 (엑셀)] 버튼으로 받은\n'
-            + '   Hana연락처백업_*.xlsx 를 올려주세요.\n'
+            + '▶ Hana 연락처 정리 도우미 → ③ 내려받기 → [현재 리스트 내려받기 (엑셀)]로 받은\n'
+            + '   Hana연락처리스트_*.xlsx (예전 이름 Hana연락처백업_*.xlsx) 를 올려주세요.\n'
             + '   (이 화면에서 저장한 담당명단_관리엑셀_*.xlsx 도 같은 양식이라 사용 가능합니다)');
         return;
     }
@@ -587,8 +587,8 @@ function loadNew(file, dz){
                 alert('담당 명단 양식이 아닙니다.\n\n'
                     + '이 파일의 첫 줄: ' + (h.slice(0,4).join(', ')||'(비어 있음)') + '\n'
                     + '필요한 형태 : 임시저장이름, 연락처, 사번/생년월일, 권한구분\n\n'
-                    + '▶ Hana 연락처 정리 도우미 → 오른쪽 위 [현재 작업 백업 (엑셀)] 버튼으로 받은\n'
-                    + '   Hana연락처백업_*.xlsx 를 올려주세요.\n'
+                    + '▶ Hana 연락처 정리 도우미 → ③ 내려받기 → [현재 리스트 내려받기 (엑셀)]로 받은\n'
+                    + '   Hana연락처리스트_*.xlsx (예전 이름 Hana연락처백업_*.xlsx) 를 올려주세요.\n'
                     + '   (이 화면에서 저장한 담당명단_관리엑셀_*.xlsx 도 사용 가능합니다)');
                 return;
             }
@@ -1200,7 +1200,7 @@ function exportKaTalk(){
 //   호칭 = 빈칸(= 까톡오토가 기존 호칭 유지).
 // ⚠️ 까톡오토는 '기존 이름'이 친구 목록에 없으면 자체 조치(미리보기에서 표시)를 하므로 여기선 구글 원래 이름을 그대로 쓴다.
 // ⚠️ SheetJS 무료판은 서식·드롭다운을 못 쓴다 → 양식과 같은 xlsx를 XML로 직접 조립해 SheetJS 내장 CFB로 zip한다.
-const APP_VER = 'v1.5.1';   // ⚠️ 제목·배지와 같이 올릴 것
+const APP_VER = 'v1.6.0';   // ⚠️ 제목·배지와 같이 올릴 것
 const KAKAO_NAME_MAX = 20;
 function buildKakaoChangeRows(delKeptEx){
     const byName=(i)=>(a,b)=>a[i]<b[i]?-1:a[i]>b[i]?1:0;
