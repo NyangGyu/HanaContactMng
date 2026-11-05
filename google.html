@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구글 연락처 정리 도우미 v1.5.0</title>
+    <title>구글 연락처 정리 도우미 v1.5.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -71,7 +71,7 @@
 
     <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-3">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.5.0 · 261104</span></h2>
+            <h2 class="fw-bold mb-1"><i class="bi bi-google text-success"></i> 구글 연락처 정리 도우미 <span class="badge bg-dark fs-6 align-middle ms-1 shadow-sm" title="업로드(배포)된 버전. 새로 올린 뒤 이 번호가 바뀌었으면 정상 반영된 것입니다.">v1.5.1 · 261105</span></h2>
             <p class="text-secondary mb-0">이미 저장된 구글 주소록을 <b>현재 담당 명단</b>과 대조하여, 호칭·이전담당·개인 연락처를 정리합니다.</p>
         </div>
     </div>
@@ -1200,7 +1200,7 @@ function exportKaTalk(){
 //   호칭 = 빈칸(= 까톡오토가 기존 호칭 유지).
 // ⚠️ 까톡오토는 '기존 이름'이 친구 목록에 없으면 자체 조치(미리보기에서 표시)를 하므로 여기선 구글 원래 이름을 그대로 쓴다.
 // ⚠️ SheetJS 무료판은 서식·드롭다운을 못 쓴다 → 양식과 같은 xlsx를 XML로 직접 조립해 SheetJS 내장 CFB로 zip한다.
-const APP_VER = 'v1.5.0';   // ⚠️ 제목·배지와 같이 올릴 것
+const APP_VER = 'v1.5.1';   // ⚠️ 제목·배지와 같이 올릴 것
 const KAKAO_NAME_MAX = 20;
 function buildKakaoChangeRows(delKeptEx){
     const byName=(i)=>(a,b)=>a[i]<b[i]?-1:a[i]>b[i]?1:0;
